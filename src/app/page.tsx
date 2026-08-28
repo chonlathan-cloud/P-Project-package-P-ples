@@ -1,59 +1,143 @@
+import Image from "next/image";
 import Link from "next/link";
 import { GalleryGrid } from "@/components/gallery-grid";
-import { PackageVisual } from "@/components/package-visual";
+import { generatedGalleryConcepts } from "@/content/generated-gallery";
 import type { GalleryItem } from "@/features/gallery/types";
 import { getPublishedGallery } from "@/lib/content-api";
 
+const capabilities = [
+  {
+    title: "กล่องออฟเซ็ทและกล่องกระดาษพับ",
+    text: "จัด brief จากสินค้า ขนาด วัสดุ และพื้นที่งานพิมพ์",
+    href: "/products/folding-carton",
+    image: "/images/generated/cosmetic-folding-carton-v2.webp",
+    alt: "ภาพจำลองกล่องกระดาษพับหลายขนาดโดยไม่มีตราสินค้า",
+    className: "capability-wide",
+  },
+  {
+    title: "กล่องลูกฟูกและกล่องไปรษณีย์",
+    text: "เริ่มจากน้ำหนัก รูปแบบบรรจุ การขนส่ง และการซ้อน",
+    href: "/products/corrugated-box",
+    image: "/images/generated/corrugated-structure-v2.webp",
+    alt: "ภาพจำลองกล่องลูกฟูกและชิ้นรองไดคัทโดยไม่มีตราสินค้า",
+    className: "capability-tall",
+  },
+  {
+    title: "กล่องไดคัทและชิ้นรองสินค้า",
+    text: "กำหนดวิธีเปิด ปิด และจัดวางให้สอดคล้องกับสินค้า",
+    href: "/products/custom-die-cut",
+    image: "/images/generated/premium-die-cut-v2.webp",
+    alt: "ภาพจำลองกล่องไดคัทพร้อมชิ้นรองและปลอกกล่อง",
+    className: "capability-standard",
+  },
+] as const;
+
 export default async function HomePage() {
-  let gallery: GalleryItem[] = [];
+  let gallery: GalleryItem[] = generatedGalleryConcepts;
   try {
-    gallery = (await getPublishedGallery()).slice(0, 3);
+    const published = await getPublishedGallery();
+    if (published.length > 0) gallery = published.slice(0, 4);
   } catch {
-    gallery = [];
+    gallery = generatedGalleryConcepts;
   }
   return (
     <>
-      <section className="hero">
-        <div className="shell hero-grid">
-          <div className="hero-copy">
-            <p className="eyebrow">CUSTOM PACKAGING · MADE TO YOUR BRIEF</p>
-            <h1>
-              เริ่มทำกล่อง
-              <br />
-              จากข้อมูลที่คุณมี
-            </h1>
-            <p className="lead">
-              มีสเปกพร้อมแล้ว หรือยังไม่แน่ใจว่าควรเริ่มจากกล่องแบบไหน
-              เลือกเส้นทางที่ตรงกับงานของคุณ
-            </p>
-            <div className="path-actions" aria-label="เลือกเส้นทางขอราคา">
-              <Link
-                className="path-link path-primary"
-                href="/quote?path=has_specifications"
-              >
-                <span>01</span>
-                <strong>ฉันมีสเปกงานแล้ว</strong>
-                <small>แจ้งขนาด วัสดุ และจำนวน</small>
-              </Link>
-              <Link className="path-link" href="/quote?path=needs_guidance">
-                <span>02</span>
-                <strong>ฉันต้องการคำแนะนำ</strong>
-                <small>เริ่มจากสินค้าและเป้าหมาย</small>
-              </Link>
-            </div>
+      <section className="storefront-hero">
+        <Image
+          className="hero-image"
+          src="/images/generated/hero-print-production-v2.webp"
+          fill
+          priority
+          sizes="100vw"
+          alt="ภาพจำลองพื้นที่ผลิตสิ่งพิมพ์และเครื่องพิมพ์ออฟเซ็ต"
+        />
+        <div className="hero-overlay" aria-hidden="true" />
+        <div className="shell hero-content">
+          <p className="eyebrow hero-kicker">CUSTOM PACKAGING</p>
+          <h1>
+            กล่องสั่งผลิต
+            <br />
+            เริ่มจาก brief ที่ชัดเจน
+          </h1>
+          <p className="lead">
+            มีสเปกพร้อมแล้ว หรือยังไม่แน่ใจว่าควรเริ่มจากกล่องแบบไหน
+            ส่งข้อมูลเท่าที่มีเพื่อให้ทีมตรวจสอบงาน
+          </p>
+          <div className="hero-actions">
+            <Link
+              className="button button-yellow"
+              href="/quote?path=has_specifications"
+            >
+              ส่งสเปกเพื่อขอราคา
+            </Link>
+            <Link
+              className="button button-outline-light"
+              href="/quote?path=needs_guidance"
+            >
+              ต้องการคำแนะนำ
+            </Link>
           </div>
-          <PackageVisual />
+        </div>
+      </section>
+
+      <section className="section capabilities-section">
+        <div className="shell section-heading split-heading">
+          <div>
+            <p className="eyebrow">OUR CAPABILITIES</p>
+            <h2>เลือกประเภทกล่องจากการใช้งานจริง</h2>
+          </div>
+          <Link className="text-link" href="/products">
+            ดูประเภทกล่องทั้งหมด →
+          </Link>
+        </div>
+        <div className="shell capability-grid">
+          {capabilities.map((item) => (
+            <Link
+              className={`capability-card ${item.className}`}
+              href={item.href}
+              key={item.href}
+            >
+              <Image
+                src={item.image}
+                fill
+                sizes="(max-width: 760px) 100vw, 60vw"
+                alt={item.alt}
+              />
+              <span className="capability-shade" aria-hidden="true" />
+              <span className="capability-copy">
+                <strong>{item.title}</strong>
+                <small>{item.text}</small>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="workflow-proof" aria-label="หลักการเริ่มประเมินงาน">
+        <div className="shell proof-grid">
+          <div>
+            <strong>Offset</strong>
+            <span>งานพิมพ์และกล่องกระดาษสำหรับภาคอุตสาหกรรม</span>
+          </div>
+          <div>
+            <strong>Board</strong>
+            <span>กล่องกระดาษพับ กล่องพรีเมี่ยม และกล่องจั่วปัง</span>
+          </div>
+          <div>
+            <strong>Flute</strong>
+            <span>กล่องลูกฟูก 3 ชั้น 5 ชั้น และชิ้นรองสินค้า</span>
+          </div>
         </div>
       </section>
 
       <section className="section proof-intro">
         <div className="shell section-heading split-heading">
           <div>
-            <p className="eyebrow">WORK, NOT PROMISES</p>
-            <h2>ดูรายละเอียดจากงานที่เผยแพร่ได้จริง</h2>
+            <p className="eyebrow">SELECTED WORK</p>
+            <h2>ตัวอย่างภาพและแนวทางโครงสร้าง</h2>
           </div>
           <Link className="text-link" href="/gallery">
-            ดูผลงานทั้งหมด →
+            ดูแกลเลอรีและคำอธิบาย →
           </Link>
         </div>
         <div className="shell">
@@ -62,29 +146,29 @@ export default async function HomePage() {
       </section>
 
       <section className="section offer-section">
-        <div className="shell">
+        <div className="shell offers-layout">
           <div className="section-heading">
-            <p className="eyebrow">CHOOSE BY BUSINESS STAGE</p>
-            <h2>ขอบเขตงานต่างกัน วิธีเริ่มก็ต่างกัน</h2>
+            <p className="eyebrow">CHOOSE YOUR START</p>
+            <h2>ธุรกิจแต่ละระยะ ต้องเตรียมข้อมูลต่างกัน</h2>
           </div>
           <div className="offer-rows">
             <Link href="/solutions/starter">
               <span>01</span>
               <h3>เริ่มสินค้าใหม่</h3>
-              <p>สำรวจรูปแบบกล่องและข้อมูลที่ต้องใช้ก่อนประเมินงาน</p>
-              <strong>Starter →</strong>
+              <p>เปลี่ยนข้อมูลสินค้าให้เป็น brief ที่ประเมินได้</p>
+              <strong>ดูแนวทาง →</strong>
             </Link>
             <Link href="/solutions/growth">
               <span>02</span>
-              <h3>แบรนด์กำลังเติบโต</h3>
-              <p>จัดระบบสเปกและภาพลักษณ์ให้พร้อมสำหรับการสั่งผลิตต่อเนื่อง</p>
-              <strong>Growth →</strong>
+              <h3>กำลังเติบโต</h3>
+              <p>จัดระบบสเปกและอาร์ตเวิร์กสำหรับการสั่งซ้ำ</p>
+              <strong>ดูแนวทาง →</strong>
             </Link>
             <Link href="/solutions/scale">
               <span>03</span>
-              <h3>งานผลิตต่อเนื่อง</h3>
-              <p>เริ่มจากข้อกำหนด ปริมาณ และแผนการจัดส่งของทีมจัดซื้อ</p>
-              <strong>Scale →</strong>
+              <h3>ผลิตต่อเนื่อง</h3>
+              <p>ระบุข้อกำหนด ปริมาณ และแผนส่งมอบร่วมกัน</p>
+              <strong>ดูแนวทาง →</strong>
             </Link>
           </div>
         </div>
@@ -123,6 +207,17 @@ export default async function HomePage() {
               </div>
             </li>
           </ol>
+        </div>
+      </section>
+
+      <section className="section closing-cta">
+        <div className="shell closing-cta-inner">
+          <p className="eyebrow">START YOUR PROJECT</p>
+          <h2>พร้อมส่งรายละเอียดกล่องของคุณหรือยัง</h2>
+          <p>เริ่มจากสเปกที่มี หรือให้ระบบช่วยจัดลำดับข้อมูลที่ต้องเตรียม</p>
+          <Link className="button" href="/quote">
+            ส่งรายละเอียดเพื่อขอราคา
+          </Link>
         </div>
       </section>
     </>

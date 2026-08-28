@@ -17,6 +17,7 @@ __pycache__/
 .env.local
 .local/
 services/content-api/.local/
+.stitch/reference/
 
 # Terraform local state and plans
 **/.terraform/

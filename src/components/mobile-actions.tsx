@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { company } from "@/content/company";
 
 export function MobileActions() {
   const pathname = usePathname();
-  if (pathname.startsWith("/quote") || pathname.startsWith("/admin"))
+  if (
+    pathname.startsWith("/quote") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/products")
+  )
     return null;
   return (
     <nav className="mobile-actions" aria-label="ทางลัดติดต่อ">
-      <Link href="/quote">ส่งข้อมูล</Link>
-      <Link href="/contact#line">LINE</Link>
-      <Link href="/contact#phone">โทร</Link>
+      <Link href="/quote">ขอใบเสนอราคา</Link>
+      <a href={`tel:${company.phoneHref}`}>โทรคุณเปิ้ล</a>
     </nav>
   );
 }

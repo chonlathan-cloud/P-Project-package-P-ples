@@ -16,6 +16,13 @@ terraform -chdir=infra/foundation plan -out=foundation.tfplan
 
 Do not apply either plan without a reviewed plan artifact and explicit approval. Terraform never creates secret versions: add the two random 32-byte values per environment through an approved non-logging workflow after the secret containers exist.
 
+Test secret versions were created on 2026-08-28 through stdin-only generation:
+
+- `ddbox-test-media-token-key`: version `1`, enabled
+- `ddbox-test-web-revalidation-token`: version `1`, enabled
+
+Production secret containers still have no versions. Secret payloads remain outside Terraform and the repository.
+
 The foundation stack was applied on 2026-08-28 with `37 added, 0 changed, 0 destroyed`. A post-apply refresh reported no drift. Re-plan before any future apply; the saved initial plan must not be reused.
 
 Because this is a shared project, principals with inherited project-level Owner or Editor roles can access the state bucket even when its bucket IAM is narrow. Never put secret payloads, service-account keys, tokens, or credentials in Terraform configuration or state.

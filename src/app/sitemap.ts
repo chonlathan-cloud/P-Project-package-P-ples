@@ -6,10 +6,12 @@ const routes = [
   "/products/folding-carton",
   "/products/corrugated-box",
   "/products/custom-die-cut",
+  "/solutions",
   "/solutions/starter",
   "/solutions/growth",
   "/solutions/scale",
   "/gallery",
+  "/company",
   "/quote",
   "/contact",
 ];

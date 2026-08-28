@@ -16,7 +16,8 @@ The interface must help two audiences act quickly: customers who already know th
 | --- | --- | --- |
 | `--color-brand-primary` | `#FFCC00` | Primary brand surfaces and highlights |
 | `--color-brand-primary-hover` | `#E6B800` | Primary hover/active state |
-| `--color-action` | `#C92A36` | High-emphasis CTA and focus accent |
+| `--color-action` | `#E63946` | High-emphasis CTA and focus accent |
+| `--color-action-strong` | `#C92A36` | Accessible action text and CTA surface |
 | `--color-action-hover` | `#A91F2A` | CTA hover/active state |
 | `--color-text` | `#111827` | Primary text |
 | `--color-text-muted` | `#4B5563` | Secondary text |
@@ -32,8 +33,8 @@ White text must not be used on brand yellow. Body text and interactive states mu
 
 ### Typography
 
-- Thai-first text must use `Noto Sans Thai`, `Thonburi`, `Tahoma`, or a compatible sans-serif fallback. Libre Franklin may be used for Latin text only; it must not be the sole Thai font.
-- Base body size is `18px/1.65` on desktop and `16px/1.6` below `768px`.
+- The primary family is `Libre Franklin`; Thai-first text must fall back to `Noto Sans Thai`, `Thonburi`, `Tahoma`, or a compatible sans-serif. Libre Franklin must not be the sole Thai font.
+- Base body size is `20px/1.5` on desktop and `16px/1.6` below `768px`.
 - Display scale: `clamp(2.5rem, 7vw, 5.5rem)`; H1: `clamp(2.25rem, 5vw, 4.5rem)`; H2: `clamp(1.75rem, 3vw, 3rem)`; H3: `clamp(1.25rem, 2vw, 1.75rem)`.
 - Headings must be concise, use tight line height (`1.05–1.2`), and avoid decorative all-caps Thai text.
 - Paragraph measure should stay within `68ch`.
@@ -42,7 +43,7 @@ White text must not be used on brand yellow. Body text and interactive states mu
 
 - Spacing scale: `4, 8, 12, 16, 24, 32, 48, 64, 96, 128px`.
 - Content width: `min(100% - 32px, 1200px)`; use `48px` side gutters on wide screens when space permits.
-- Control radius: `4px`; media radius: `8px`; compact pill radius may be used only for filters/status.
+- Control radius: `3px`; emphasized action radius: `24px`; compact pill radius (`50px`) may be used only for filters/status.
 - Avoid nested rounded containers. A section should normally use layout, rules, or background contrast instead of a card wrapper.
 - Motion must communicate state, complete in `120–240ms`, and respect `prefers-reduced-motion`.
 
@@ -123,4 +124,3 @@ White text must not be used on brand yellow. Body text and interactive states mu
 - 320px, tablet, desktop, 200% zoom, long Thai copy, empty data, and failure states are verified.
 - No unapproved fact, brand asset, contact detail, or SEO claim is present.
 - Final `$ui-ux-review` result has AI-template smell `LOW` or an explicitly accepted `MEDIUM`, never `HIGH`.
-

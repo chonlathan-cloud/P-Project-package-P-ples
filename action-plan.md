@@ -1,7 +1,7 @@
 # DD Box Printing Website — Action Plan
 
-Status: implementation in progress; local vertical slice and shared-project GCP foundation completed; secret versions, Cloud Run deployment, and remaining launch inputs require separate approvals tracked in `docs/decisions/launch-blockers.md`  
-Target: conversion-focused, SEO-ready DD Box Printing website with a structured admin CMS  
+Status: implementation in progress; local vertical slice, shared-project GCP foundation, and test runtime secrets completed; Cloud Run deployment, production secrets, and remaining launch inputs require separate approvals tracked in `docs/decisions/launch-blockers.md`
+Target: conversion-focused, SEO-ready DD Box Printing website with a structured admin CMS
 GCP discovery project: `the49-487609`
 
 ## 1. Executive decisions

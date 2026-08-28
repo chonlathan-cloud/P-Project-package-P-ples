@@ -9,7 +9,8 @@ export function MobileActions() {
   if (
     pathname.startsWith("/quote") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/products")
+    pathname.startsWith("/products") ||
+    pathname.startsWith("/solutions")
   )
     return null;
   return (

@@ -1,85 +1,130 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { solutions } from "@/content/solutions";
 
 export const metadata: Metadata = {
-  title: "โซลูชันตามระยะธุรกิจ",
-  description: "เลือกแนวทางเตรียม brief บรรจุภัณฑ์ตามระยะและข้อกำหนดของธุรกิจ",
+  title: "เลือกวิธีเริ่มงานกล่อง",
+  description:
+    "เลือกวิธีเตรียมข้อมูลบรรจุภัณฑ์จากสถานการณ์ของงาน ตั้งแต่ยังไม่มีสเปกจนถึงงานที่มีข้อกำหนดต่อเนื่อง",
   alternates: { canonical: "/solutions" },
 };
 
-const solutions = [
-  [
-    "01",
-    "เริ่มสินค้าใหม่",
-    "จัดลำดับข้อมูลสินค้าและเปลี่ยนแนวคิดให้เป็น brief ที่ประเมินได้",
-    "/solutions/starter",
-  ],
-  [
-    "02",
-    "แบรนด์กำลังเติบโต",
-    "จัดระบบสเปก วัสดุ และอาร์ตเวิร์กให้พร้อมสำหรับการสั่งซ้ำ",
-    "/solutions/growth",
-  ],
-  [
-    "03",
-    "งานผลิตต่อเนื่อง",
-    "เตรียมข้อกำหนด ปริมาณ รอบความต้องการ และปลายทางร่วมกัน",
-    "/solutions/scale",
-  ],
+const commonInputs = [
+  "ภาพหรือขนาดสินค้า",
+  "จำนวนโดยประมาณ",
+  "วิธีบรรจุและใช้งาน",
+  "กำหนดใช้และข้อมูลจัดส่งเท่าที่มี",
 ] as const;
 
 export default function SolutionsPage() {
   return (
     <>
-      <section className="overview-hero">
-        <div className="shell overview-grid">
-          <div>
-            <p className="eyebrow">PACKAGING SOLUTIONS</p>
+      <section className="solution-overview-hero">
+        <div className="shell solution-overview-grid">
+          <div className="solution-overview-copy">
+            <p className="eyebrow">เลือกวิธีเริ่มงาน</p>
             <h1>
-              เริ่มประเมินงาน
+              งานกล่องของคุณ
               <br />
-              ให้ตรงกับระยะธุรกิจ
+              อยู่ในสถานการณ์ไหน
             </h1>
             <p className="lead">
-              ข้อมูลที่ต้องเตรียมต่างกันตามเป้าหมายของสินค้าและรูปแบบการสั่งผลิต
-              เลือกจุดเริ่มที่ใกล้กับงานของคุณที่สุด
+              หน้า Products ช่วยเลือกประเภทกล่อง
+              ส่วนหน้านี้ช่วยเลือกวิธีเตรียมข้อมูล
+              เลือกจากสิ่งที่คุณมีอยู่ตอนนี้ ไม่จำเป็นต้องรอให้สเปกครบ
             </p>
+            <Link className="text-link" href="/products">
+              หากกำลังเลือกประเภทกล่อง ดูหน้า Products →
+            </Link>
           </div>
-          <div className="overview-media">
+          <figure className="solution-overview-media">
             <Image
-              src="/images/generated/premium-die-cut-v2.webp"
+              src="/images/generated/solutions-workflow-v1.webp"
               fill
-              sizes="(max-width: 900px) 100vw, 48vw"
-              alt="ภาพจำลองกล่องไดคัทที่เปิดให้เห็นชิ้นรองเฉพาะสินค้า"
+              priority
+              sizes="(max-width: 900px) 100vw, 50vw"
+              alt="ภาพจำลองโต๊ะทำงานที่มีภาพร่าง แบบคลี่ ตัวอย่างวัสดุ และกล่องหลายระยะของการเตรียมงาน"
             />
-          </div>
+            <figcaption>
+              ภาพจำลองเพื่ออธิบายขั้นตอนเตรียมข้อมูล ไม่ใช่ผลงานลูกค้า
+            </figcaption>
+          </figure>
         </div>
       </section>
-      <section className="section">
-        <div className="shell solution-card-grid">
-          {solutions.map(([number, title, text, href]) => (
-            <Link href={href} key={href}>
-              <span>{number}</span>
-              <h2>{title}</h2>
-              <p>{text}</p>
-              <strong>ดูข้อมูลที่ควรเตรียม →</strong>
-            </Link>
+
+      <section
+        className="section solution-paths-section"
+        aria-labelledby="solution-paths-title"
+      >
+        <div className="shell solution-paths-heading">
+          <p className="eyebrow">CHOOSE FROM WHAT YOU HAVE</p>
+          <h2 id="solution-paths-title">เลือกจากข้อมูลที่มีอยู่ตอนนี้</h2>
+          <p>
+            ทั้งสามเส้นทางใช้เพื่อจัด brief ให้เหมาะกับความพร้อมของงาน
+            ไม่ใช่แพ็กเกจราคาหรือการรับรองเงื่อนไขการผลิต
+          </p>
+        </div>
+        <div className="shell solution-path-list">
+          {solutions.map((solution) => (
+            <article className="solution-path-row" key={solution.slug}>
+              <span className="solution-path-number">{solution.number}</span>
+              <div className="solution-path-intro">
+                <p>{solution.status}</p>
+                <h3>{solution.title}</h3>
+                <p>{solution.summary}</p>
+              </div>
+              <div className="solution-path-column">
+                <h4>เหมาะเมื่อ</h4>
+                <ul>
+                  {solution.fit.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="solution-path-column">
+                <h4>เริ่มส่งข้อมูล</h4>
+                <ul>
+                  {solution.inputs.slice(0, 3).map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <Link
+                className="solution-path-link"
+                href={`/solutions/${solution.slug}`}
+              >
+                ดูวิธีเริ่มเส้นทางนี้ →
+              </Link>
+            </article>
           ))}
         </div>
       </section>
-      <section className="technical-strip">
-        <div className="shell technical-grid">
+
+      <section className="solution-common-section">
+        <div className="shell solution-common-grid">
           <div>
-            <p className="eyebrow">TECHNICAL BRIEF</p>
-            <h2>ทุกเส้นทางกลับมาที่ข้อมูลหลักชุดเดียวกัน</h2>
+            <p className="eyebrow">ส่งเท่าที่มี</p>
+            <h2>ข้อมูลพื้นฐานที่ใช้ได้ทุกเส้นทาง</h2>
+            <p>
+              ไม่จำเป็นต้องมีครบทุกข้อ
+              ทีมจะตรวจสอบข้อมูลที่ส่งมาและระบุสิ่งที่ต้องถามเพิ่มก่อนประเมินงาน
+            </p>
+            <Link
+              className="button button-yellow"
+              href="/quote?path=needs_guidance"
+            >
+              ยังไม่แน่ใจ ให้ทีมช่วยจัด brief
+            </Link>
           </div>
-          <ul>
-            <li>ขนาดและน้ำหนักสินค้า</li>
-            <li>จำนวนโดยประมาณและรอบความต้องการ</li>
-            <li>วัสดุ งานพิมพ์ และข้อจำกัดโครงสร้าง</li>
-            <li>กำหนดใช้และพื้นที่จัดส่ง</li>
-          </ul>
+          <ol className="solution-common-list">
+            {commonInputs.map((item, index) => (
+              <li key={item}>
+                <span>0{index + 1}</span>
+                <strong>{item}</strong>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
     </>

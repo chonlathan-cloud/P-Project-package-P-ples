@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { GalleryGrid } from "@/components/gallery-grid";
 import { generatedGalleryConcepts } from "@/content/generated-gallery";
+import { solutions } from "@/content/solutions";
 import type { GalleryItem } from "@/features/gallery/types";
 import { getPublishedGallery } from "@/lib/content-api";
 
@@ -149,27 +150,17 @@ export default async function HomePage() {
         <div className="shell offers-layout">
           <div className="section-heading">
             <p className="eyebrow">CHOOSE YOUR START</p>
-            <h2>ธุรกิจแต่ละระยะ ต้องเตรียมข้อมูลต่างกัน</h2>
+            <h2>งานแต่ละสถานการณ์ เริ่มเตรียมข้อมูลต่างกัน</h2>
           </div>
           <div className="offer-rows">
-            <Link href="/solutions/starter">
-              <span>01</span>
-              <h3>เริ่มสินค้าใหม่</h3>
-              <p>เปลี่ยนข้อมูลสินค้าให้เป็น brief ที่ประเมินได้</p>
-              <strong>ดูแนวทาง →</strong>
-            </Link>
-            <Link href="/solutions/growth">
-              <span>02</span>
-              <h3>กำลังเติบโต</h3>
-              <p>จัดระบบสเปกและอาร์ตเวิร์กสำหรับการสั่งซ้ำ</p>
-              <strong>ดูแนวทาง →</strong>
-            </Link>
-            <Link href="/solutions/scale">
-              <span>03</span>
-              <h3>ผลิตต่อเนื่อง</h3>
-              <p>ระบุข้อกำหนด ปริมาณ และแผนส่งมอบร่วมกัน</p>
-              <strong>ดูแนวทาง →</strong>
-            </Link>
+            {solutions.map((solution) => (
+              <Link href={`/solutions/${solution.slug}`} key={solution.slug}>
+                <span>{solution.number}</span>
+                <h3>{solution.status}</h3>
+                <p>{solution.title}</p>
+                <strong>ดูวิธีเริ่มงาน →</strong>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

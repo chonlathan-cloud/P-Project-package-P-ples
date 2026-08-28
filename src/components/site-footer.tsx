@@ -23,6 +23,7 @@ export function SiteFooter() {
         </nav>
         <nav aria-label="ข้อมูลและการติดต่อ">
           <h2>ข้อมูล</h2>
+          <Link href="/solutions">วิธีเริ่มงาน</Link>
           <Link href="/gallery">ผลงาน</Link>
           <Link href="/company">เกี่ยวกับเรา</Link>
           <Link href="/contact">ติดต่อ</Link>

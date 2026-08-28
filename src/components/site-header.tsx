@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 
 const navigation = [
   ["สินค้า", "/products"],
-  ["โซลูชัน", "/solutions"],
+  ["วิธีเริ่มงาน", "/solutions"],
   ["ผลงาน", "/gallery"],
   ["เกี่ยวกับเรา", "/company"],
   ["ติดต่อ", "/contact"],

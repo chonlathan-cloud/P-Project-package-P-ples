@@ -76,12 +76,12 @@ export default function ProductsPage() {
             <p className="eyebrow">CHOOSE YOUR START</p>
             <h2>ยังไม่แน่ใจว่าควรเริ่มจากกล่องแบบไหน</h2>
             <p>
-              เลือกแนวทางตามระยะธุรกิจ แล้วส่งข้อมูลสินค้าเท่าที่มีให้ทีมช่วยจัด
-              brief
+              เลือกวิธีเริ่มจากข้อมูลที่มีอยู่ตอนนี้
+              แล้วส่งรายละเอียดสินค้าเท่าที่มีให้ทีมช่วยจัด brief
             </p>
           </div>
           <Link className="button button-yellow" href="/solutions">
-            เลือกตามระยะธุรกิจ
+            ดูวิธีเริ่มงาน
           </Link>
         </div>
       </section>

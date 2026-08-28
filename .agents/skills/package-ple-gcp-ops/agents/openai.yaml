@@ -1,0 +1,4 @@
+interface:
+  display_name: "Package-ple GCP Ops"
+  short_description: "Read-only GCP infrastructure diagnostics"
+  default_prompt: "Use $package-ple-gcp-ops to inspect the current GCP infrastructure state safely."

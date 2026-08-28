@@ -1,0 +1,35 @@
+services:
+  content-api:
+    build:
+      context: ./services/content-api
+    environment:
+      DDBOX_ENVIRONMENT: local
+      DDBOX_DATA_BACKEND: memory
+      DDBOX_AUTH_MODE: firebase
+      DDBOX_GCP_PROJECT_ID: ${DDBOX_GCP_PROJECT_ID:-}
+      DDBOX_PUBLIC_API_URL: http://localhost:8000
+      DDBOX_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8080"
+    read_only: true
+    tmpfs:
+      - /app/.local/media:size=64m,uid=1001,gid=1001
+
+  web:
+    build:
+      context: .
+      args:
+        SITE_URL: http://localhost:3000
+        CONTENT_API_URL: http://content-api:8080
+        NEXT_PUBLIC_CONTENT_API_URL: http://localhost:8000
+    environment:
+      SITE_URL: http://localhost:3000
+      CONTENT_API_URL: http://content-api:8080
+    depends_on:
+      - content-api
+    ports:
+      - "3000:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+

@@ -1,0 +1,8 @@
+project_id = "the49-487609"
+region     = "asia-southeast1"
+
+# Fill only after the Cloud Run test/prod web origins or canonical domains exist.
+media_cors_origins = {
+  test = []
+  prod = []
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI/UX Review"
+  short_description: "Review DD Box interfaces against design quality gates"
+  default_prompt: "Use $ui-ux-review to critique this DD Box interface before implementation."

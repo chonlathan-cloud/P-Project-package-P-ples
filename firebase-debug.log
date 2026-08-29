@@ -1,0 +1,22 @@
+[debug] [2026-08-29T06:30:25.157Z] ----------------------------------------------------------------------
+[debug] [2026-08-29T06:30:25.158Z] Command:       /Users/chonlathansongsri/.nvm/versions/node/v24.19.0/bin/node /Users/chonlathansongsri/.npm-global/bin/firebase apps:list --project the49-487609
+[debug] [2026-08-29T06:30:25.158Z] CLI Version:   15.0.0
+[debug] [2026-08-29T06:30:25.158Z] Platform:      darwin
+[debug] [2026-08-29T06:30:25.158Z] Node Version:  v24.19.0
+[debug] [2026-08-29T06:30:25.159Z] Time:          Sat Aug 29 2026 13:30:25 GMT+0700 (Indochina Time)
+[debug] [2026-08-29T06:30:25.159Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-29T06:30:25.254Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-29T06:30:25.255Z] > authorizing via signed-in user (chonlathan@manee-son.com)
+[debug] [2026-08-29T06:30:25.256Z] Checked if tokens are valid: true, expires at: 1787988198509
+[debug] [2026-08-29T06:30:25.256Z] Checked if tokens are valid: true, expires at: 1787988198509
+[debug] [2026-08-29T06:30:25.257Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/the49-487609:searchApps pageSize=100
+[debug] [2026-08-29T06:30:25.878Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/the49-487609:searchApps 200
+[debug] [2026-08-29T06:30:25.878Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/the49-487609:searchApps {"apps":[{"name":"projects/the49-487609/webApps/1:439060579730:web:19e00bdaef54f1aa566d4b","displayName":"the49-nextjs-frontend","platform":"WEB","appId":"1:439060579730:web:19e00bdaef54f1aa566d4b","namespace":"ODFmZGQxNzEtNjU3ZS00MmY3LWE1N2MtMTM5NjkzN2JkZWM0","apiKeyId":"1fce164e-4b6e-443e-a184-865df2c038b7","state":"ACTIVE","expireTime":"1970-01-01T00:00:00Z"}]}
+[info] ┌───────────────────────┬───────────────────────────────────────────┬──────────┐
+│ App Display Name      │ App ID                                    │ Platform │
+├───────────────────────┼───────────────────────────────────────────┼──────────┤
+│ the49-nextjs-frontend │ 1:439060579730:web:19e00bdaef54f1aa566d4b │ WEB      │
+└───────────────────────┴───────────────────────────────────────────┴──────────┘
+[info] 
+[info] 1 app(s) total.

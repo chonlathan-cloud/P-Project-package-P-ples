@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { GalleryGrid } from "@/components/gallery-grid";
-import { generatedGalleryConcepts } from "@/content/generated-gallery";
+import { getApprovedClientBrands } from "@/content/client-brands";
 import { solutions } from "@/content/solutions";
 import type { GalleryItem } from "@/features/gallery/types";
 import { getPublishedGallery } from "@/lib/content-api";
@@ -34,12 +34,13 @@ const capabilities = [
 ] as const;
 
 export default async function HomePage() {
-  let gallery: GalleryItem[] = generatedGalleryConcepts;
+  const clientBrands = getApprovedClientBrands();
+  let gallery: GalleryItem[] = [];
   try {
     const published = await getPublishedGallery();
-    if (published.length > 0) gallery = published.slice(0, 4);
+    gallery = published.slice(0, 4);
   } catch {
-    gallery = generatedGalleryConcepts;
+    gallery = [];
   }
   return (
     <>
@@ -200,6 +201,39 @@ export default async function HomePage() {
           </ol>
         </div>
       </section>
+
+      {clientBrands.length > 0 && (
+        <section
+          className="section client-proof-section"
+          aria-labelledby="client-proof-heading"
+        >
+          <div className="shell client-proof-layout">
+            <div className="client-proof-heading">
+              <p className="eyebrow">SELECTED CLIENTS</p>
+              <h2 id="client-proof-heading">แบรนด์ที่เคยร่วมงานกับ DD Box</h2>
+              <p>
+                ตัวอย่างลูกค้าที่ให้เราได้ร่วมผลิตงานบรรจุภัณฑ์
+                และอนุญาตให้เผยแพร่ชื่อและโลโก้บนเว็บไซต์
+              </p>
+            </div>
+
+            <ul className="client-logo-grid">
+              {clientBrands.map((brand) => (
+                <li key={brand.id}>
+                  <Image
+                    src={brand.logoSrc}
+                    width={brand.logoWidth}
+                    height={brand.logoHeight}
+                    sizes="(max-width: 640px) 38vw, 160px"
+                    alt={brand.logoAlt}
+                  />
+                  <span>{brand.name}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
 
       <section className="section closing-cta">
         <div className="shell closing-cta-inner">

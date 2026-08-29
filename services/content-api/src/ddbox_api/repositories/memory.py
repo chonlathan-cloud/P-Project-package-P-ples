@@ -3,13 +3,20 @@ from __future__ import annotations
 from threading import RLock
 
 from ddbox_api.domain.errors import ConflictError, NotFoundError
-from ddbox_api.domain.models import ContentStatus, GalleryItem, StoredLead, utc_now
+from ddbox_api.domain.models import (
+    ContentStatus,
+    GalleryItem,
+    PricingBenchmark,
+    StoredLead,
+    utc_now,
+)
 
 
 class InMemoryContentRepository:
     def __init__(self) -> None:
         self._gallery: dict[str, GalleryItem] = {}
         self._gallery_slugs: dict[str, str] = {}
+        self._pricing: dict[str, PricingBenchmark] = {}
         self._leads: dict[str, StoredLead] = {}
         self._idempotency: dict[str, str] = {}
         self._lock = RLock()
@@ -67,6 +74,22 @@ class InMemoryContentRepository:
                 key=lambda item: item.published_at or item.created_at,
                 reverse=True,
             )
+
+    def list_published_pricing_benchmarks(self) -> list[PricingBenchmark]:
+        with self._lock:
+            return sorted(
+                (
+                    item.model_copy(deep=True)
+                    for item in self._pricing.values()
+                    if item.status == ContentStatus.PUBLISHED
+                ),
+                key=lambda item: item.label,
+            )
+
+    def seed_pricing_benchmark(self, item: PricingBenchmark) -> None:
+        """Test support for exercising the public pricing contract."""
+        with self._lock:
+            self._pricing[item.id] = item.model_copy(deep=True)
 
     def create_lead_once(
         self,

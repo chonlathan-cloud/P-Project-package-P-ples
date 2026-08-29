@@ -1,47 +1,288 @@
 import type { Metadata } from "next";
-import { GalleryGrid } from "@/components/gallery-grid";
-import { generatedGalleryConcepts } from "@/content/generated-gallery";
-import { getPublishedGallery } from "@/lib/content-api";
-import type { GalleryItem } from "@/features/gallery/types";
+import Link from "next/link";
+import { ProjectImageGallery } from "@/features/gallery/project-image-gallery";
+import type { GalleryItem, PricingBenchmark } from "@/features/gallery/types";
+import { getPublishedGallery, getPublishedPricing } from "@/lib/content-api";
 
 export const metadata: Metadata = {
-  title: "ผลงานและแนวทางกล่องบรรจุภัณฑ์",
-  description: "ผลงานที่ได้รับอนุญาตและภาพจำลองแนวทางโครงสร้างกล่องบรรจุภัณฑ์",
+  title: "ผลงานและราคาเริ่มต้นกล่องบรรจุภัณฑ์",
+  description:
+    "ดูแนวทางโครงสร้าง วัสดุ และราคาเริ่มต้นโดยประมาณของงานกล่องบรรจุภัณฑ์",
   alternates: { canonical: "/gallery" },
 };
 
-export default async function GalleryPage() {
-  let items: GalleryItem[] = generatedGalleryConcepts;
+function baht(satang: number): string {
+  return new Intl.NumberFormat("th-TH", {
+    minimumFractionDigits: satang % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(satang / 100);
+}
+
+function startingPrice(price: PricingBenchmark): string {
+  const maximum = price.starting_price_max_satang;
+  return maximum && maximum !== price.starting_price_min_satang
+    ? `${baht(price.starting_price_min_satang)}–${baht(maximum)} บาท/${price.unit}`
+    : `${baht(price.starting_price_min_satang)} บาท/${price.unit}`;
+}
+
+function benchmarkRange(price: PricingBenchmark): string {
+  const maximum = price.benchmark_max_satang;
+  const suffix = price.benchmark_open_ended ? "+" : "";
+  return maximum
+    ? `${baht(price.benchmark_min_satang)}–${baht(maximum)}${suffix} บาท/${price.unit}`
+    : `เริ่ม ${baht(price.benchmark_min_satang)} บาท/${price.unit}`;
+}
+
+function Project({
+  item,
+  price,
+  index,
+}: {
+  item: GalleryItem;
+  price?: PricingBenchmark;
+  index: number;
+}) {
+  return (
+    <article className="portfolio-project">
+      <ProjectImageGallery images={item.images} title={item.title} />
+      <div className="project-copy">
+        <div className="project-index" aria-hidden="true">
+          {String(index + 1).padStart(2, "0")}
+        </div>
+        <p className="project-kicker">
+          {item.evidence_type === "concept"
+            ? "ภาพจำลอง"
+            : "ผลงานที่ได้รับอนุญาต"}
+          <span aria-hidden="true"> / </span>
+          {item.category}
+        </p>
+        <h3>{item.title}</h3>
+        <p className="project-summary">{item.summary}</p>
+        <dl className="project-specs">
+          {item.specs.material ? (
+            <div>
+              <dt>วัสดุ</dt>
+              <dd>{item.specs.material}</dd>
+            </div>
+          ) : null}
+          {item.specs.quantity ? (
+            <div>
+              <dt>จำนวนอ้างอิง</dt>
+              <dd>{item.specs.quantity}</dd>
+            </div>
+          ) : null}
+          {item.specs.application ? (
+            <div>
+              <dt>เหมาะกับ</dt>
+              <dd>{item.specs.application}</dd>
+            </div>
+          ) : null}
+        </dl>
+        {price ? (
+          <div className="project-price">
+            <p>ราคาเริ่มต้นโดยประมาณ</p>
+            <strong>{startingPrice(price)}</strong>
+            <dl>
+              <div>
+                <dt>ช่วงราคาอ้างอิง</dt>
+                <dd>{benchmarkRange(price)}</dd>
+              </div>
+              {price.quantity_basis ? (
+                <div>
+                  <dt>ฐานจำนวน</dt>
+                  <dd>{price.quantity_basis}</dd>
+                </div>
+              ) : null}
+            </dl>
+            <small>{price.disclaimer}</small>
+          </div>
+        ) : null}
+        <Link
+          className="button project-cta"
+          href={{
+            pathname: "/quote",
+            query: {
+              path: "has_specifications",
+              product_type: item.category,
+              reference: item.title,
+            },
+          }}
+        >
+          ส่งสเปกงานลักษณะนี้
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+export default async function GalleryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const selectedCategory = (await searchParams).category;
+  let items: GalleryItem[] = [];
+  let prices: PricingBenchmark[] = [];
   let unavailable = false;
+
   try {
-    const published = await getPublishedGallery();
-    if (published.length > 0) items = published;
+    [items, prices] = await Promise.all([
+      getPublishedGallery(),
+      getPublishedPricing(),
+    ]);
   } catch {
     unavailable = true;
   }
+
+  const categories = [...new Set(items.map((item) => item.category))];
+  const visibleItems = selectedCategory
+    ? items.filter((item) => item.category === selectedCategory)
+    : items;
+  const priceById = new Map(prices.map((price) => [price.id, price]));
+  const customerWork = visibleItems.filter(
+    (item) => item.evidence_type === "customer_work",
+  );
+  const concepts = visibleItems.filter(
+    (item) => item.evidence_type === "concept",
+  );
+
   return (
-    <section className="page-section gallery-page">
-      <div className="shell page-heading gallery-page-heading">
-        <p className="eyebrow">SELECTED WORK</p>
-        <h1>ผลงานและแนวทางโครงสร้าง</h1>
-        <p>
-          ผลงานลูกค้าจะแสดงเฉพาะรายการที่ได้รับอนุญาต ส่วนรายการที่ระบุว่า
-          “ภาพจำลอง” ใช้เพื่ออธิบายแนวทางโครงสร้างและไม่ใช่ผลงานลูกค้าจริง
-        </p>
-        <div className="gallery-context" aria-label="ประเภทผลงานที่ระบบรองรับ">
-          <span>กล่องกระดาษพับ</span>
-          <span>กล่องลูกฟูก</span>
-          <span>กล่องไดคัท</span>
+    <main className="gallery-page">
+      <section className="gallery-hero">
+        <div className="shell gallery-hero-layout">
+          <div>
+            <p className="eyebrow">PACKAGING REFERENCES</p>
+            <h1>ดูงานจริง เข้าใจโครงสร้าง และเห็นกรอบงบก่อนเริ่มคุย</h1>
+          </div>
+          <div className="gallery-hero-copy">
+            <p>
+              รวมผลงานที่ได้รับอนุญาตและภาพจำลองเพื่อช่วยเลือกประเภทกล่อง
+              แต่ละรายการแสดงวัสดุ มุมโครงสร้าง
+              และราคาเริ่มต้นจากฐานข้อมูลล่าสุด
+            </p>
+            <p className="gallery-price-caution">
+              ราคาเป็นเพียงข้อมูลประมาณการ ไม่ใช่ใบเสนอราคา
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="shell">
-        {unavailable ? (
-          <p className="concept-notice" role="status">
-            ระบบผลงานจริงยังเชื่อมต่อไม่ได้ ขณะนี้จึงแสดงภาพจำลองโครงสร้างแทน
+      </section>
+
+      {!unavailable && categories.length > 0 ? (
+        <nav className="gallery-filters shell" aria-label="กรองประเภทผลงาน">
+          <Link
+            aria-current={!selectedCategory ? "page" : undefined}
+            href="/gallery"
+          >
+            ทั้งหมด <span>{items.length}</span>
+          </Link>
+          {categories.map((category) => (
+            <Link
+              key={category}
+              aria-current={selectedCategory === category ? "page" : undefined}
+              href={{ pathname: "/gallery", query: { category } }}
+            >
+              {category}{" "}
+              <span>
+                {items.filter((item) => item.category === category).length}
+              </span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+
+      {unavailable ? (
+        <section className="section shell error-state" role="status">
+          <p className="eyebrow">TEMPORARILY UNAVAILABLE</p>
+          <h2>ยังโหลดข้อมูลผลงานไม่ได้</h2>
+          <p>
+            ระบบไม่แสดงข้อมูลสำรองที่อาจล้าสมัย กรุณาลองใหม่หรือติดต่อทีมโดยตรง
           </p>
-        ) : null}
-        <GalleryGrid items={items} />
-      </div>
-    </section>
+          <Link className="button" href="/contact">
+            ติดต่อทีม DD Box
+          </Link>
+        </section>
+      ) : visibleItems.length === 0 ? (
+        <section className="section shell empty-state">
+          <h2>ยังไม่มีผลงานในหมวดนี้</h2>
+          <p>
+            เลือกดูทั้งหมด หรือส่งข้อมูลสินค้าให้ทีมช่วยแนะนำรูปแบบที่เหมาะสม
+          </p>
+          <Link className="button" href="/gallery">
+            ดูผลงานทั้งหมด
+          </Link>
+        </section>
+      ) : (
+        <>
+          {customerWork.length > 0 ? (
+            <section
+              className="portfolio-section shell"
+              aria-labelledby="real-work-heading"
+            >
+              <header className="portfolio-heading">
+                <p className="eyebrow">APPROVED CUSTOMER WORK</p>
+                <h2 id="real-work-heading">ผลงานที่ได้รับอนุญาต</h2>
+              </header>
+              {customerWork.map((item, index) => (
+                <Project
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  price={
+                    item.pricing_benchmark_id
+                      ? priceById.get(item.pricing_benchmark_id)
+                      : undefined
+                  }
+                />
+              ))}
+            </section>
+          ) : null}
+
+          {concepts.length > 0 ? (
+            <section
+              className="portfolio-section shell"
+              aria-labelledby="concept-heading"
+            >
+              <header className="portfolio-heading concept-heading">
+                <div>
+                  <p className="eyebrow">FORMAT &amp; BUDGET GUIDE</p>
+                  <h2 id="concept-heading">ตัวอย่างรูปแบบและงบประมาณ</h2>
+                </div>
+                <p>
+                  ภาพในส่วนนี้สร้างขึ้นเพื่ออธิบายแนวทางเท่านั้น
+                  ไม่ใช่ผลงานของลูกค้าหรือสินค้าที่ผลิตจริง
+                </p>
+              </header>
+              {concepts.map((item, index) => (
+                <Project
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  price={
+                    item.pricing_benchmark_id
+                      ? priceById.get(item.pricing_benchmark_id)
+                      : undefined
+                  }
+                />
+              ))}
+            </section>
+          ) : null}
+        </>
+      )}
+
+      <section className="section gallery-closing">
+        <div className="shell gallery-closing-inner">
+          <div>
+            <p className="eyebrow">YOUR PRODUCT, YOUR SPEC</p>
+            <h2>มีสินค้าแล้ว แต่ยังไม่แน่ใจว่าจะเริ่มจากกล่องแบบไหน?</h2>
+          </div>
+          <Link
+            className="button button-yellow"
+            href="/quote?path=needs_guidance"
+          >
+            ส่งข้อมูลสินค้าให้ทีมแนะนำ
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }

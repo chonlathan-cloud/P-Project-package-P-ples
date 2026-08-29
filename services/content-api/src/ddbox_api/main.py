@@ -28,6 +28,7 @@ from ddbox_api.repositories.memory import InMemoryContentRepository
 from ddbox_api.services.gallery import GalleryService
 from ddbox_api.services.leads import LeadService, LoggingNotificationGateway
 from ddbox_api.services.media import CloudStorageMediaStore, LocalMediaStore, MediaStore
+from ddbox_api.services.pricing import PricingService
 from ddbox_api.services.rate_limit import InMemoryRateLimiter
 from ddbox_api.services.revalidation import RevalidationGateway
 
@@ -94,6 +95,7 @@ def create_app(
     app.state.repository = repository or _repository(active_settings)
     app.state.token_verifier = token_verifier or _verifier(active_settings)
     app.state.gallery_service = GalleryService(app.state.repository)
+    app.state.pricing_service = PricingService(app.state.repository)
     app.state.lead_service = LeadService(app.state.repository, LoggingNotificationGateway())
     app.state.media_store = _media_store(active_settings, media_root)
     app.state.revalidation = RevalidationGateway(

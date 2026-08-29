@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
@@ -17,6 +17,11 @@ class ContentStatus(StrEnum):
     ARCHIVED = "archived"
 
 
+class GalleryEvidenceType(StrEnum):
+    CUSTOMER_WORK = "customer_work"
+    CONCEPT = "concept"
+
+
 class MediaRef(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -28,6 +33,22 @@ class MediaRef(BaseModel):
     alt: str = Field(min_length=3, max_length=300)
 
 
+class GallerySpecs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    material: str | None = Field(default=None, max_length=160)
+    quantity: str | None = Field(default=None, max_length=120)
+    application: str | None = Field(default=None, max_length=200)
+
+
+def _migrate_legacy_gallery_image(data: Any) -> Any:
+    if isinstance(data, dict) and "images" not in data and "image" in data:
+        migrated = dict(data)
+        migrated["images"] = [migrated.pop("image")]
+        return migrated
+    return data
+
+
 class GalleryItemCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -36,8 +57,16 @@ class GalleryItemCreate(BaseModel):
     title: str = Field(min_length=3, max_length=160)
     summary: str = Field(min_length=3, max_length=500)
     category: str = Field(min_length=2, max_length=80)
-    image: MediaRef
+    images: list[MediaRef] = Field(min_length=1, max_length=12)
+    evidence_type: GalleryEvidenceType = GalleryEvidenceType.CUSTOMER_WORK
+    pricing_benchmark_id: str | None = Field(default=None, min_length=3, max_length=120)
+    specs: GallerySpecs = Field(default_factory=GallerySpecs)
     customer_permission: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_image(cls, data: Any) -> Any:
+        return _migrate_legacy_gallery_image(data)
 
 
 class GalleryItem(BaseModel):
@@ -49,7 +78,10 @@ class GalleryItem(BaseModel):
     title: str
     summary: str
     category: str
-    image: MediaRef
+    images: list[MediaRef] = Field(min_length=1, max_length=12)
+    evidence_type: GalleryEvidenceType = GalleryEvidenceType.CUSTOMER_WORK
+    pricing_benchmark_id: str | None = None
+    specs: GallerySpecs = Field(default_factory=GallerySpecs)
     customer_permission: bool
     status: ContentStatus = ContentStatus.DRAFT
     version: int = 1
@@ -58,6 +90,50 @@ class GalleryItem(BaseModel):
     published_at: datetime | None = None
     created_by: str
     updated_by: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_image(cls, data: Any) -> Any:
+        return _migrate_legacy_gallery_image(data)
+
+
+class PricingBenchmark(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", min_length=3, max_length=120)
+    locale: Literal["th"] = "th"
+    label: str = Field(min_length=3, max_length=160)
+    category: str = Field(min_length=2, max_length=80)
+    starting_price_min_satang: int = Field(ge=0)
+    starting_price_max_satang: int | None = Field(default=None, ge=0)
+    benchmark_min_satang: int = Field(ge=0)
+    benchmark_max_satang: int | None = Field(default=None, ge=0)
+    benchmark_open_ended: bool = False
+    unit: Literal["ใบ", "ชิ้น"]
+    quantity_basis: str | None = Field(default=None, max_length=120)
+    material: str = Field(min_length=2, max_length=200)
+    disclaimer: str = Field(min_length=10, max_length=500)
+    status: ContentStatus = ContentStatus.DRAFT
+    version: int = Field(default=1, ge=1)
+    created_at: datetime
+    updated_at: datetime
+    published_at: datetime | None = None
+    created_by: str
+    updated_by: str
+
+    @model_validator(mode="after")
+    def validate_price_ranges(self) -> PricingBenchmark:
+        if (
+            self.starting_price_max_satang is not None
+            and self.starting_price_max_satang < self.starting_price_min_satang
+        ):
+            raise ValueError("starting price maximum must not be below minimum")
+        if (
+            self.benchmark_max_satang is not None
+            and self.benchmark_max_satang < self.benchmark_min_satang
+        ):
+            raise ValueError("benchmark maximum must not be below minimum")
+        return self
 
 
 class GalleryPublishRequest(BaseModel):

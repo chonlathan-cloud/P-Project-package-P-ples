@@ -9,6 +9,7 @@ from ddbox_api.repositories.base import ContentRepository
 from ddbox_api.services.gallery import GalleryService
 from ddbox_api.services.leads import LeadService
 from ddbox_api.services.media import MediaStore
+from ddbox_api.services.pricing import PricingService
 from ddbox_api.services.revalidation import RevalidationGateway
 
 
@@ -22,6 +23,10 @@ def get_verifier(request: Request) -> TokenVerifier:
 
 def get_gallery_service(request: Request) -> GalleryService:
     return cast(GalleryService, request.app.state.gallery_service)
+
+
+def get_pricing_service(request: Request) -> PricingService:
+    return cast(PricingService, request.app.state.pricing_service)
 
 
 def get_lead_service(request: Request) -> LeadService:

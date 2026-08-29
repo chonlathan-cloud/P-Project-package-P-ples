@@ -43,46 +43,50 @@ export function AdminGalleryEditor() {
     setMessage("");
     try {
       const form = new FormData(event.currentTarget);
-      const file = form.get("image");
-      if (!(file instanceof File) || file.size === 0)
-        throw new Error("กรุณาเลือกภาพ");
+      const files = form
+        .getAll("images")
+        .filter((file): file is File => file instanceof File && file.size > 0);
+      if (files.length === 0) throw new Error("กรุณาเลือกภาพ");
+      if (files.length > 12) throw new Error("หนึ่งผลงานเพิ่มได้สูงสุด 12 ภาพ");
       const token = await user.getIdToken();
       const authHeaders = { Authorization: `Bearer ${token}` };
-      const uploadSession = await api<{
-        id: string;
-        upload_url: string;
-        finalize_token: string;
-      }>("/v1/admin/media/uploads", {
-        method: "POST",
-        headers: { ...authHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          content_type: file.type,
-          size: file.size,
-          purpose: "gallery",
-          alt: String(form.get("alt")),
-        }),
-      });
-      const upload = await fetch(uploadSession.upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!upload.ok) throw new Error("อัปโหลดภาพไม่สำเร็จ");
-      const media = await api<{
-        id: string;
-        url: string;
-        fallback_url: string;
-        width: number;
-        height: number;
-        alt: string;
-      }>(`/v1/admin/media/uploads/${uploadSession.id}/finalize`, {
-        method: "POST",
-        headers: {
-          ...authHeaders,
-          "X-Media-Finalize-Token": uploadSession.finalize_token,
-        },
-      });
+      const baseAlt = String(form.get("alt"));
+      const images = [];
+      for (const [index, file] of files.entries()) {
+        const uploadSession = await api<{
+          id: string;
+          upload_url: string;
+          finalize_token: string;
+        }>("/v1/admin/media/uploads", {
+          method: "POST",
+          headers: { ...authHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            content_type: file.type,
+            size: file.size,
+            purpose: "gallery",
+            alt: files.length > 1 ? `${baseAlt} มุมที่ ${index + 1}` : baseAlt,
+          }),
+        });
+        const upload = await fetch(uploadSession.upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!upload.ok) throw new Error(`อัปโหลดภาพที่ ${index + 1} ไม่สำเร็จ`);
+        images.push(
+          await api<GalleryItem["images"][number]>(
+            `/v1/admin/media/uploads/${uploadSession.id}/finalize`,
+            {
+              method: "POST",
+              headers: {
+                ...authHeaders,
+                "X-Media-Finalize-Token": uploadSession.finalize_token,
+              },
+            },
+          ),
+        );
+      }
       const item = await api<GalleryItem>("/v1/admin/gallery-items", {
         method: "POST",
         headers: { ...authHeaders, "Content-Type": "application/json" },
@@ -91,8 +95,16 @@ export function AdminGalleryEditor() {
           title: String(form.get("title")),
           summary: String(form.get("summary")),
           category: String(form.get("category")),
+          evidence_type: String(form.get("evidence_type")),
+          pricing_benchmark_id:
+            String(form.get("pricing_benchmark_id")) || null,
+          specs: {
+            material: String(form.get("material")) || null,
+            quantity: String(form.get("quantity")) || null,
+            application: String(form.get("application")) || null,
+          },
           customer_permission: form.get("customer_permission") === "on",
-          image: media,
+          images,
         }),
       });
       setDraft(item);
@@ -192,6 +204,29 @@ export function AdminGalleryEditor() {
           />
           <Field name="category" label="หมวดหมู่" />
           <label className="field">
+            <span>ประเภทหลักฐาน</span>
+            <select name="evidence_type" defaultValue="customer_work">
+              <option value="customer_work">ผลงานลูกค้าที่ได้รับอนุญาต</option>
+              <option value="concept">ภาพจำลองแนวทาง</option>
+            </select>
+          </label>
+          <Field
+            name="pricing_benchmark_id"
+            label="Pricing benchmark ID (ถ้ามี)"
+            required={false}
+          />
+          <Field name="material" label="วัสดุ (ถ้ามี)" required={false} />
+          <Field
+            name="quantity"
+            label="จำนวนอ้างอิง (ถ้ามี)"
+            required={false}
+          />
+          <Field
+            name="application"
+            label="เหมาะกับงานประเภท (ถ้ามี)"
+            required={false}
+          />
+          <label className="field">
             <span>คำอธิบาย</span>
             <textarea
               name="summary"
@@ -202,11 +237,12 @@ export function AdminGalleryEditor() {
             />
           </label>
           <label className="field">
-            <span>ภาพ JPG, PNG, WebP หรือ AVIF</span>
+            <span>ภาพ 1–12 ภาพ (JPG, PNG, WebP หรือ AVIF)</span>
             <input
               type="file"
-              name="image"
+              name="images"
               accept="image/jpeg,image/png,image/webp,image/avif"
+              multiple
               required
             />
           </label>
@@ -225,8 +261,8 @@ export function AdminGalleryEditor() {
             <>
               <div className="preview-image">
                 <img
-                  src={draft.image.fallback_url ?? draft.image.url}
-                  alt={draft.image.alt}
+                  src={draft.images[0].fallback_url ?? draft.images[0].url}
+                  alt={draft.images[0].alt}
                 />
               </div>
               <p className="eyebrow">{draft.category}</p>
@@ -280,15 +316,17 @@ function Field({
   name,
   label,
   pattern,
+  required = true,
 }: {
   name: string;
   label: string;
   pattern?: string;
+  required?: boolean;
 }) {
   return (
     <label className="field">
       <span>{label}</span>
-      <input name={name} pattern={pattern} minLength={3} required />
+      <input name={name} pattern={pattern} minLength={3} required={required} />
     </label>
   );
 }

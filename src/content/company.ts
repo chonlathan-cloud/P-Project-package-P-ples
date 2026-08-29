@@ -5,8 +5,11 @@ export const company = {
   email: "Nuntha@ddboxprinting.com",
   phoneDisplay: "084-678-9714",
   phoneHref: "+66846789714",
-  lineId: "nuntha0.0",
-  lineHref: "https://line.me/ti/p/~nuntha0.0",
+  lineOaId: "@824cxmxh",
+  lineOaHref: "https://line.me/R/ti/p/@824cxmxh",
+  lineSaleId: "nuntha0.0",
+  lineSaleHref: "https://line.me/ti/p/~nuntha0.0",
+  facebookHref: "https://www.facebook.com/profile.php?id=100069155223004",
   address:
     "10 หมู่ 7 ถนนวัดศรีวารีน้อย ตำบลบางโฉลง อำเภอบางพลี จังหวัดสมุทรปราการ 10540",
   mapHref:

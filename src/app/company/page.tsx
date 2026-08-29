@@ -317,7 +317,7 @@ export default function CompanyPage() {
             <h3>มีสินค้าแต่ยังไม่มีสเปก</h3>
             <p>ส่งรูป ขนาด น้ำหนัก และเป้าหมายเท่าที่มีให้ทีมช่วยจัด brief</p>
             <Link
-              className="button button-outline-light"
+              className="button-secondary"
               href="/quote?path=needs_guidance"
             >
               ส่งข้อมูลสินค้าให้ทีมแนะนำ

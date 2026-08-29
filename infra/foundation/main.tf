@@ -13,10 +13,55 @@ locals {
   }
 
   secrets = {
-    for pair in setproduct(keys(local.environments), ["media-token-key", "web-revalidation-token"]) :
-    "${pair[0]}-${pair[1]}" => {
-      environment = pair[0]
-      purpose     = pair[1]
+    "test-media-token-key" = {
+      secret_id   = "ddbox-test-media-token-key"
+      environment = "test"
+      purpose     = "media-token-key"
+    }
+    "test-web-revalidation-token" = {
+      secret_id   = "ddbox-test-web-revalidation-token"
+      environment = "test"
+      purpose     = "web-revalidation-token"
+    }
+    "prod-media-token-key" = {
+      secret_id   = "ddbox-prod-media-token-key"
+      environment = "prod"
+      purpose     = "media-token-key"
+    }
+    "prod-web-revalidation-token" = {
+      secret_id   = "ddbox-prod-web-revalidation-token"
+      environment = "prod"
+      purpose     = "web-revalidation-token"
+    }
+    "test-line-channel-access-token" = {
+      secret_id   = "ddbox-test-line-channel-access-token"
+      environment = "test"
+      purpose     = "line-channel-access-token"
+    }
+    "test-line-notification-target-id" = {
+      secret_id   = "ddbox-test-line-notification-target-id"
+      environment = "test"
+      purpose     = "line-notification-target-id"
+    }
+    "test-email-provider-api-key" = {
+      secret_id   = "ddbox-test-email-provider-api-key"
+      environment = "test"
+      purpose     = "email-provider-api-key"
+    }
+    "prod-line-channel-access-token" = {
+      secret_id   = "ddbox-line-channel-access-token"
+      environment = "prod"
+      purpose     = "line-channel-access-token"
+    }
+    "prod-line-notification-target-id" = {
+      secret_id   = "ddbox-line-notification-target-id"
+      environment = "prod"
+      purpose     = "line-notification-target-id"
+    }
+    "prod-email-provider-api-key" = {
+      secret_id   = "ddbox-email-provider-api-key"
+      environment = "prod"
+      purpose     = "email-provider-api-key"
     }
   }
 }
@@ -163,7 +208,7 @@ resource "google_secret_manager_secret" "runtime" {
   for_each = local.secrets
 
   project             = var.project_id
-  secret_id           = "ddbox-${each.key}"
+  secret_id           = each.value.secret_id
   deletion_protection = true
 
   replication {
@@ -256,6 +301,22 @@ resource "google_secret_manager_secret_iam_member" "api_revalidation_token" {
   secret_id = google_secret_manager_secret.runtime["${each.key}-web-revalidation-token"].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.api[each.key].email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "api_notifications" {
+  for_each = {
+    for key, secret in local.secrets : key => secret
+    if contains([
+      "line-channel-access-token",
+      "line-notification-target-id",
+      "email-provider-api-key",
+    ], secret.purpose)
+  }
+
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.runtime[each.key].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.api[each.value.environment].email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "web_revalidation_token" {

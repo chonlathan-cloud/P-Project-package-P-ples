@@ -4,11 +4,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, Request, status
 
-from ddbox_api.dependencies import get_gallery_service, get_lead_service
+from ddbox_api.dependencies import get_gallery_service, get_lead_service, get_pricing_service
 from ddbox_api.domain.errors import ValidationError
-from ddbox_api.domain.models import GalleryItem, LeadCreate, LeadReceipt
+from ddbox_api.domain.models import GalleryItem, LeadCreate, LeadReceipt, PricingBenchmark
 from ddbox_api.services.gallery import GalleryService
 from ddbox_api.services.leads import LeadService
+from ddbox_api.services.pricing import PricingService
 
 router = APIRouter(prefix="/v1", tags=["public"])
 
@@ -17,6 +18,13 @@ router = APIRouter(prefix="/v1", tags=["public"])
 def list_gallery_items(
     service: Annotated[GalleryService, Depends(get_gallery_service)],
 ) -> list[GalleryItem]:
+    return service.list_published()
+
+
+@router.get("/pricing-benchmarks", response_model=list[PricingBenchmark])
+def list_pricing_benchmarks(
+    service: Annotated[PricingService, Depends(get_pricing_service)],
+) -> list[PricingBenchmark]:
     return service.list_published()
 
 

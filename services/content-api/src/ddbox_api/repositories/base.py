@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ddbox_api.domain.models import GalleryItem, StoredLead
+from ddbox_api.domain.models import GalleryItem, PricingBenchmark, StoredLead
 
 
 class ContentRepository(Protocol):
@@ -17,6 +17,8 @@ class ContentRepository(Protocol):
     ) -> GalleryItem: ...
 
     def list_published_gallery_items(self) -> list[GalleryItem]: ...
+
+    def list_published_pricing_benchmarks(self) -> list[PricingBenchmark]: ...
 
     def create_lead_once(
         self,

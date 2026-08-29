@@ -8,6 +8,7 @@ export function MobileActions() {
   const pathname = usePathname();
   if (
     pathname.startsWith("/quote") ||
+    pathname.startsWith("/contact") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/products") ||
     pathname.startsWith("/solutions")
@@ -16,7 +17,7 @@ export function MobileActions() {
   return (
     <nav className="mobile-actions" aria-label="ทางลัดติดต่อ">
       <Link href="/quote">ขอใบเสนอราคา</Link>
-      <a href={`tel:${company.phoneHref}`}>โทรคุณเปิ้ล</a>
+      <a href={company.lineOaHref}>LINE OA</a>
     </nav>
   );
 }

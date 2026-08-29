@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { quoteFormSchema, toLeadPayload, type QuoteFormValues } from "./schema";
 
 type Path = QuoteFormValues["customer_path"];
+
+const quoteSteps = ["เลือกจุดเริ่ม", "รายละเอียดงาน", "ติดต่อกลับ"] as const;
 
 const blankForm: QuoteFormValues = {
   customer_path: "needs_guidance",
@@ -24,20 +26,40 @@ const blankForm: QuoteFormValues = {
   website: "",
 };
 
-export function QuoteForm({ initialPath }: { initialPath: Path }) {
+export function QuoteForm({
+  initialPath,
+  initialProductType = "",
+  reference = "",
+}: {
+  initialPath: Path;
+  initialProductType?: string;
+  reference?: string;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [values, setValues] = useState<QuoteFormValues>({
     ...blankForm,
     customer_path: initialPath,
+    product_type: initialProductType,
+    project_details: reference
+      ? `สนใจประเมินงานโดยอ้างอิงจาก: ${reference}`
+      : "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const errorSummary = useRef<HTMLDivElement>(null);
+  const stepPanel = useRef<HTMLDivElement>(null);
+  const hasRendered = useRef(false);
   const idempotencyKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (hasRendered.current) stepPanel.current?.focus();
+    else hasRendered.current = true;
+  }, [step]);
 
   function update(name: keyof QuoteFormValues, value: string | boolean) {
     setValues((current) => ({ ...current, [name]: value }));
+    if (status === "error") setStatus("idle");
     setErrors((current) => {
       const next = { ...current };
       delete next[name];
@@ -108,10 +130,37 @@ export function QuoteForm({ initialPath }: { initialPath: Path }) {
 
   return (
     <form className="quote-form" onSubmit={submit} noValidate>
-      <div className="form-progress" aria-label={`ขั้นตอน ${step} จาก 3`}>
-        <span style={{ width: `${step * 33.333}%` }} />
-      </div>
-      <p className="step-label">ขั้นตอน {step} / 3</p>
+      <ol className="quote-steps" aria-label="ขั้นตอนขอใบเสนอราคา">
+        {quoteSteps.map((label, index) => {
+          const position = index + 1;
+          const state =
+            position < step
+              ? "complete"
+              : position === step
+                ? "current"
+                : "upcoming";
+          return (
+            <li
+              key={label}
+              className={`quote-step ${state}`}
+              aria-current={state === "current" ? "step" : undefined}
+            >
+              <span>{String(position).padStart(2, "0")}</span>
+              <strong>{label}</strong>
+              <small className="sr-only">
+                {state === "complete"
+                  ? "เสร็จแล้ว"
+                  : state === "current"
+                    ? "ขั้นตอนปัจจุบัน"
+                    : "ยังไม่ถึงขั้นตอนนี้"}
+              </small>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="sr-only" aria-live="polite">
+        ขั้นตอน {step} จาก {quoteSteps.length}: {quoteSteps[step - 1]}
+      </p>
       {Object.keys(errors).length > 0 ? (
         <div
           className="error-summary"
@@ -129,50 +178,78 @@ export function QuoteForm({ initialPath }: { initialPath: Path }) {
       ) : null}
 
       {step === 1 ? (
-        <fieldset className="path-fieldset">
-          <legend>คุณต้องการเริ่มจากแบบไหน</legend>
-          <label
-            className={
-              values.customer_path === "has_specifications"
-                ? "choice selected"
-                : "choice"
-            }
-          >
-            <input
-              type="radio"
-              name="customer_path"
-              checked={values.customer_path === "has_specifications"}
-              onChange={() => update("customer_path", "has_specifications")}
-            />
-            <span>
-              <strong>มีสเปกงานแล้ว</strong>
-              <small>ฉันทราบประเภทกล่อง ขนาด หรือจำนวนโดยประมาณ</small>
-            </span>
-          </label>
-          <label
-            className={
-              values.customer_path === "needs_guidance"
-                ? "choice selected"
-                : "choice"
-            }
-          >
-            <input
-              type="radio"
-              name="customer_path"
-              checked={values.customer_path === "needs_guidance"}
-              onChange={() => update("customer_path", "needs_guidance")}
-            />
-            <span>
-              <strong>ต้องการคำแนะนำ</strong>
-              <small>ฉันมีสินค้า แต่ยังไม่แน่ใจเรื่องรูปแบบกล่อง</small>
-            </span>
-          </label>
-        </fieldset>
+        <div className="quote-step-panel" ref={stepPanel} tabIndex={-1}>
+          <fieldset className="path-fieldset">
+            <legend>เลือกจุดเริ่มที่ใกล้กับคุณที่สุด</legend>
+            <div className="path-options">
+              <label
+                className={
+                  values.customer_path === "has_specifications"
+                    ? "choice selected"
+                    : "choice"
+                }
+              >
+                <span className="choice-number" aria-hidden="true">
+                  01
+                </span>
+                <input
+                  type="radio"
+                  name="customer_path"
+                  checked={values.customer_path === "has_specifications"}
+                  onChange={() => update("customer_path", "has_specifications")}
+                />
+                <span className="choice-copy">
+                  <strong>มีขนาดหรือกล่องเดิมแล้ว</strong>
+                  <small>ฉันทราบประเภทกล่อง ขนาด หรือจำนวนโดยประมาณ</small>
+                  <span className="choice-outcome">
+                    ไปกรอกจำนวน ขนาด และข้อกำหนด
+                  </span>
+                </span>
+              </label>
+              <label
+                className={
+                  values.customer_path === "needs_guidance"
+                    ? "choice selected"
+                    : "choice"
+                }
+              >
+                <span className="choice-number" aria-hidden="true">
+                  02
+                </span>
+                <input
+                  type="radio"
+                  name="customer_path"
+                  checked={values.customer_path === "needs_guidance"}
+                  onChange={() => update("customer_path", "needs_guidance")}
+                />
+                <span className="choice-copy">
+                  <strong>มีสินค้าแต่ยังไม่มีแบบ</strong>
+                  <small>ฉันยังไม่แน่ใจเรื่องขนาด วัสดุ หรือรูปแบบกล่อง</small>
+                  <span className="choice-outcome">
+                    ให้ทีมช่วยจัด brief จากข้อมูลสินค้า
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
       ) : null}
 
       {step === 2 ? (
-        <div className="form-fields">
+        <div
+          className="form-fields quote-step-panel"
+          ref={stepPanel}
+          tabIndex={-1}
+        >
           <h2>รายละเอียดงาน</h2>
+          <div className="path-guidance">
+            <p>ข้อมูลที่ช่วยทีมประเมิน</p>
+            <strong>
+              {values.customer_path === "has_specifications"
+                ? "ส่งจำนวน ขนาด วัสดุ หรือข้อกำหนดเท่าที่มี"
+                : "เริ่มจากประเภทสินค้า ขนาด น้ำหนัก และลักษณะการใช้งานเท่าที่ทราบ"}
+            </strong>
+          </div>
           <Field
             label="ประเภทสินค้า"
             name="product_type"
@@ -239,7 +316,11 @@ export function QuoteForm({ initialPath }: { initialPath: Path }) {
       ) : null}
 
       {step === 3 ? (
-        <div className="form-fields">
+        <div
+          className="form-fields quote-step-panel"
+          ref={stepPanel}
+          tabIndex={-1}
+        >
           <h2>ช่องทางติดต่อกลับ</h2>
           <div className="field-row">
             <Field
@@ -340,7 +421,7 @@ export function QuoteForm({ initialPath }: { initialPath: Path }) {
         ) : null}
         {step < 3 ? (
           <button type="button" className="button" onClick={advance}>
-            ดำเนินการต่อ
+            {step === 1 ? "ไปกรอกรายละเอียดงาน" : "ไปเลือกช่องทางติดต่อ"}
           </button>
         ) : (
           <button
@@ -354,6 +435,9 @@ export function QuoteForm({ initialPath }: { initialPath: Path }) {
           </button>
         )}
       </div>
+      <p className="sr-only" role="status" aria-live="polite">
+        {status === "submitting" ? "กำลังส่งข้อมูล กรุณารอสักครู่" : ""}
+      </p>
     </form>
   );
 }

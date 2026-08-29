@@ -6,7 +6,13 @@ from google.api_core.exceptions import AlreadyExists
 from google.cloud import firestore
 
 from ddbox_api.domain.errors import ConflictError, NotFoundError
-from ddbox_api.domain.models import ContentStatus, GalleryItem, StoredLead, utc_now
+from ddbox_api.domain.models import (
+    ContentStatus,
+    GalleryItem,
+    PricingBenchmark,
+    StoredLead,
+    utc_now,
+)
 
 
 class FirestoreContentRepository:
@@ -83,6 +89,15 @@ class FirestoreContentRepository:
             .limit(100)
         )
         return [GalleryItem.model_validate(snapshot.to_dict()) for snapshot in query.stream()]
+
+    def list_published_pricing_benchmarks(self) -> list[PricingBenchmark]:
+        query = (
+            self._client.collection("pricing_benchmarks")
+            .where(filter=firestore.FieldFilter("status", "==", ContentStatus.PUBLISHED.value))
+            .limit(100)
+        )
+        items = [PricingBenchmark.model_validate(snapshot.to_dict()) for snapshot in query.stream()]
+        return sorted(items, key=lambda item: item.label)
 
     def create_lead_once(
         self,

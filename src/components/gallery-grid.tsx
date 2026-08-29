@@ -20,20 +20,28 @@ export function GalleryGrid({ items }: { items: GalleryItem[] }) {
           }
           key={item.id}
         >
-          <picture>
-            {item.image.fallback_url ? (
-              <source srcSet={item.image.url} type="image/webp" />
-            ) : null}
-            {/* API-controlled image dimensions prevent layout shift. */}
-            <img
-              src={item.image.fallback_url ?? item.image.url}
-              width={item.image.width}
-              height={item.image.height}
-              alt={item.image.alt}
-            />
-          </picture>
+          {(() => {
+            const image = item.images[0];
+            return (
+              <picture>
+                {image.fallback_url ? (
+                  <source srcSet={image.url} type="image/webp" />
+                ) : null}
+                {/* API-controlled image dimensions prevent layout shift. */}
+                <img
+                  src={image.fallback_url ?? image.url}
+                  width={image.width}
+                  height={image.height}
+                  alt={image.alt}
+                />
+              </picture>
+            );
+          })()}
           <div className="gallery-caption">
-            <span>{item.category}</span>
+            <span>
+              {item.evidence_type === "concept" ? "ภาพจำลอง · " : ""}
+              {item.category}
+            </span>
             <h2>{item.title}</h2>
             <p>{item.summary}</p>
           </div>

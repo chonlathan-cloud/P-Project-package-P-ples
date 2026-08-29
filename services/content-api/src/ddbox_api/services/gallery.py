@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from ddbox_api.domain.errors import NotFoundError, ValidationError
-from ddbox_api.domain.models import GalleryItem, GalleryItemCreate, utc_now
+from ddbox_api.domain.models import GalleryEvidenceType, GalleryItem, GalleryItemCreate, utc_now
 from ddbox_api.repositories.base import ContentRepository
 
 
@@ -31,10 +31,10 @@ class GalleryService:
 
     def publish(self, item_id: str, expected_version: int, actor_uid: str) -> GalleryItem:
         item = self.get_preview(item_id)
-        if not item.customer_permission:
+        if item.evidence_type == GalleryEvidenceType.CUSTOMER_WORK and not item.customer_permission:
             raise ValidationError("customer publishing permission must be confirmed")
-        if not item.image.alt.strip():
-            raise ValidationError("image alt text is required")
+        if any(not image.alt.strip() for image in item.images):
+            raise ValidationError("image alt text is required for every image")
         return self._repository.publish_gallery_item(item_id, expected_version, actor_uid)
 
     def list_published(self) -> list[GalleryItem]:

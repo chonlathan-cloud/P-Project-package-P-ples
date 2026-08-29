@@ -29,10 +29,12 @@ export function SiteFooter() {
           <Link href="/contact">ติดต่อ</Link>
         </nav>
         <nav aria-label="ช่องทางติดต่อ">
-          <h2>ติดต่อคุณเปิ้ล</h2>
+          <h2>ติดต่อ DD Box</h2>
+          <a href={company.lineOaHref}>LINE OA: {company.lineOaId}</a>
+          <a href={company.lineSaleHref}>LINE ฝ่ายขาย: {company.lineSaleId}</a>
           <a href={`tel:${company.phoneHref}`}>{company.phoneDisplay}</a>
           <a href={`mailto:${company.email}`}>{company.email}</a>
-          <a href={company.lineHref}>LINE: {company.lineId}</a>
+          <a href={company.facebookHref}>Facebook Page</a>
           <Link href="/contact">ที่อยู่และแผนที่</Link>
         </nav>
       </div>

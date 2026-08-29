@@ -5,6 +5,8 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from ddbox_api.domain.models import ContentStatus, PricingBenchmark, utc_now
+
 
 def _image_bytes() -> bytes:
     output = BytesIO()
@@ -44,6 +46,10 @@ def _upload_media(client: TestClient, headers: dict[str, str]) -> dict[str, obje
     return media
 
 
+def _media_ref(media: dict[str, object]) -> dict[str, object]:
+    return {key: media[key] for key in ("id", "url", "fallback_url", "width", "height", "alt")}
+
+
 def test_gallery_upload_draft_preview_publish(
     client: TestClient, admin_headers: dict[str, str]
 ) -> None:
@@ -70,6 +76,8 @@ def test_gallery_upload_draft_preview_publish(
     assert create_response.status_code == 201
     draft = create_response.json()
     assert draft["status"] == "draft"
+    assert len(draft["images"]) == 1
+    assert "image" not in draft
     assert client.get("/v1/gallery-items").json() == []
 
     preview_response = client.get(
@@ -106,14 +114,16 @@ def test_publish_requires_permission(client: TestClient, admin_headers: dict[str
             "summary": "รายการนี้ต้องไม่เผยแพร่จนกว่าจะมีสิทธิ์ใช้งาน",
             "category": "กล่องสั่งผลิต",
             "customer_permission": False,
-            "image": {
-                "id": media["id"],
-                "url": media["url"],
-                "fallback_url": media["fallback_url"],
-                "width": media["width"],
-                "height": media["height"],
-                "alt": media["alt"],
-            },
+            "images": [
+                {
+                    "id": media["id"],
+                    "url": media["url"],
+                    "fallback_url": media["fallback_url"],
+                    "width": media["width"],
+                    "height": media["height"],
+                    "alt": media["alt"],
+                }
+            ],
         },
     )
     item = response.json()
@@ -124,6 +134,80 @@ def test_publish_requires_permission(client: TestClient, admin_headers: dict[str
     )
     assert publish.status_code == 422
     assert publish.json()["code"] == "validation_error"
+
+
+def test_concept_can_publish_without_customer_permission(
+    client: TestClient, admin_headers: dict[str, str]
+) -> None:
+    media = _upload_media(client, admin_headers)
+    response = client.post(
+        "/v1/admin/gallery-items",
+        headers=admin_headers,
+        json={
+            "slug": "concept-structure",
+            "title": "ภาพจำลองโครงสร้างกล่อง",
+            "summary": "ภาพจำลองสำหรับอธิบายโครงสร้างและงบประมาณเท่านั้น",
+            "category": "กล่องไดคัท",
+            "evidence_type": "concept",
+            "customer_permission": False,
+            "images": [_media_ref(media)],
+        },
+    )
+    assert response.status_code == 201
+    item = response.json()
+    publish = client.post(
+        f"/v1/admin/publish/gallery-item/{item['id']}",
+        headers=admin_headers,
+        json={"expected_version": 1},
+    )
+    assert publish.status_code == 200
+
+
+def test_gallery_rejects_more_than_twelve_images(
+    client: TestClient, admin_headers: dict[str, str]
+) -> None:
+    media = _upload_media(client, admin_headers)
+    response = client.post(
+        "/v1/admin/gallery-items",
+        headers=admin_headers,
+        json={
+            "slug": "too-many-images",
+            "title": "รายการภาพเกินกำหนด",
+            "summary": "ต้องปฏิเสธรายการที่มีภาพมากกว่าสิบสองภาพ",
+            "category": "กล่องไดคัท",
+            "evidence_type": "concept",
+            "images": [_media_ref(media)] * 13,
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_public_pricing_returns_only_published(client: TestClient) -> None:
+    repository = client.app.state.repository
+    now = utc_now()
+    repository.seed_pricing_benchmark(
+        PricingBenchmark(
+            id="folding-carton",
+            label="กล่องกระดาษพับ",
+            category="กล่องกระดาษพับ",
+            starting_price_min_satang=400,
+            benchmark_min_satang=400,
+            benchmark_max_satang=1000,
+            unit="ใบ",
+            quantity_basis="500-1,000 ใบ",
+            material="Art Card 300-350 แกรม",
+            disclaimer="ราคาโดยประมาณ กรุณาส่งสเปกเพื่อประเมินราคาอีกครั้ง",
+            status=ContentStatus.PUBLISHED,
+            created_at=now,
+            updated_at=now,
+            published_at=now,
+            created_by="test",
+            updated_by="test",
+        )
+    )
+    response = client.get("/v1/pricing-benchmarks")
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == ["folding-carton"]
 
 
 def test_admin_endpoints_reject_missing_token(client: TestClient) -> None:

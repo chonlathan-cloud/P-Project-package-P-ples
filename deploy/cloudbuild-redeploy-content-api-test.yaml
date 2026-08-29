@@ -1,0 +1,32 @@
+steps:
+  - name: gcr.io/google.com/cloudsdktool/google-cloud-cli:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        gcloud run deploy ddbox-content-api-test \
+          --project=the49-487609 \
+          --region=asia-southeast1 \
+          --platform=managed \
+          --image="asia-southeast1-docker.pkg.dev/the49-487609/ddbox/content-api@${_IMAGE_DIGEST}" \
+          --service-account=ddbox-api-test@the49-487609.iam.gserviceaccount.com \
+          --env-vars-file=deploy/cloudrun-content-api-test.env.yaml \
+          --set-secrets=DDBOX_MEDIA_TOKEN_KEY=ddbox-test-media-token-key:latest,DDBOX_WEB_REVALIDATION_TOKEN=ddbox-test-web-revalidation-token:latest,DDBOX_LINE_CHANNEL_SECRET=ddbox-test-line-channel-secret:latest \
+          --port=8080 \
+          --cpu=1 \
+          --memory=512Mi \
+          --concurrency=40 \
+          --timeout=60s \
+          --min=0 \
+          --max=3 \
+          --execution-environment=gen2 \
+          --cpu-boost \
+          --ingress=all \
+          --labels=application=ddbox,environment=test,managed-by=cloud-build \
+          --quiet
+serviceAccount: projects/the49-487609/serviceAccounts/ddbox-deployer@the49-487609.iam.gserviceaccount.com
+logsBucket: gs://the49-487609-ddbox-build/logs/content-api-test-redeploy
+options:
+  logging: GCS_ONLY
+substitutions:
+  _IMAGE_DIGEST: required

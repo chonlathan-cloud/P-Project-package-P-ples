@@ -9,6 +9,7 @@ from ddbox_api.domain.errors import ConflictError, NotFoundError
 from ddbox_api.domain.models import (
     ContentStatus,
     GalleryItem,
+    LineGroupCandidate,
     PricingBenchmark,
     StoredLead,
     utc_now,
@@ -19,7 +20,19 @@ class FirestoreContentRepository:
     """Firestore adapter. Collection names are stable; the database is environment-configured."""
 
     def __init__(self, project_id: str, database: str) -> None:
-        self._client = firestore.Client(project=project_id, database=database)
+        self._project_id = project_id
+        self._database = database
+        self._client_instance: firestore.Client | None = None
+
+    @property
+    def _client(self) -> firestore.Client:
+        """Create the network-aware client on first repository use, not at process import."""
+        if self._client_instance is None:
+            self._client_instance = firestore.Client(
+                project=self._project_id,
+                database=self._database,
+            )
+        return self._client_instance
 
     def create_gallery_item(self, item: GalleryItem) -> GalleryItem:
         slug_ref = self._client.collection("gallery_slugs").document(item.slug)
@@ -140,6 +153,27 @@ class FirestoreContentRepository:
 
     def mark_notification(self, lead_id: str, status: str) -> None:
         self._client.collection("leads").document(lead_id).update({"notification_status": status})
+
+    def upsert_line_group_candidate(self, candidate: LineGroupCandidate) -> None:
+        candidate_ref = self._client.collection("line_notification_targets").document(candidate.id)
+        transaction = self._client.transaction()
+
+        @firestore.transactional
+        def upsert(transaction: firestore.Transaction) -> None:
+            existing = candidate_ref.get(transaction=transaction)
+            payload = candidate.model_dump(mode="json")
+            if existing.exists:
+                payload["first_seen_at"] = existing.get("first_seen_at")
+                payload["status"] = existing.get("status") or "candidate"
+                transaction.set(candidate_ref, payload)
+                return
+            transaction.create(candidate_ref, payload)
+
+        upsert(transaction)
+
+    def get_line_group_candidate(self, candidate_id: str) -> LineGroupCandidate | None:
+        snapshot = self._client.collection("line_notification_targets").document(candidate_id).get()
+        return LineGroupCandidate.model_validate(snapshot.to_dict()) if snapshot.exists else None
 
     def _append_audit(
         self,

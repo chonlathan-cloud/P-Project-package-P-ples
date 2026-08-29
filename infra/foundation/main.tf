@@ -38,30 +38,40 @@ locals {
       environment = "test"
       purpose     = "line-channel-access-token"
     }
+    "test-line-channel-secret" = {
+      secret_id   = "ddbox-test-line-channel-secret"
+      environment = "test"
+      purpose     = "line-channel-secret"
+    }
     "test-line-notification-target-id" = {
       secret_id   = "ddbox-test-line-notification-target-id"
       environment = "test"
       purpose     = "line-notification-target-id"
     }
-    "test-email-provider-api-key" = {
-      secret_id   = "ddbox-test-email-provider-api-key"
+    "test-gmail-app-password" = {
+      secret_id   = "ddbox-test-gmail-app-password"
       environment = "test"
-      purpose     = "email-provider-api-key"
+      purpose     = "gmail-app-password"
     }
     "prod-line-channel-access-token" = {
       secret_id   = "ddbox-line-channel-access-token"
       environment = "prod"
       purpose     = "line-channel-access-token"
     }
+    "prod-line-channel-secret" = {
+      secret_id   = "ddbox-line-channel-secret"
+      environment = "prod"
+      purpose     = "line-channel-secret"
+    }
     "prod-line-notification-target-id" = {
       secret_id   = "ddbox-line-notification-target-id"
       environment = "prod"
       purpose     = "line-notification-target-id"
     }
-    "prod-email-provider-api-key" = {
-      secret_id   = "ddbox-email-provider-api-key"
+    "prod-gmail-app-password" = {
+      secret_id   = "ddbox-gmail-app-password"
       environment = "prod"
-      purpose     = "email-provider-api-key"
+      purpose     = "gmail-app-password"
     }
   }
 }
@@ -204,6 +214,35 @@ resource "google_storage_bucket" "media" {
   }
 }
 
+resource "google_storage_bucket" "build" {
+  project                     = var.project_id
+  name                        = "${var.project_id}-ddbox-build"
+  location                    = upper(var.region)
+  storage_class               = "STANDARD"
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+  force_destroy               = false
+
+  lifecycle_rule {
+    condition {
+      age = 7
+    }
+    action {
+      type = "Delete"
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  labels = {
+    application = "ddbox"
+    purpose     = "build-source-and-logs"
+    managed-by  = "terraform"
+  }
+}
+
 resource "google_secret_manager_secret" "runtime" {
   for_each = local.secrets
 
@@ -308,8 +347,9 @@ resource "google_secret_manager_secret_iam_member" "api_notifications" {
     for key, secret in local.secrets : key => secret
     if contains([
       "line-channel-access-token",
+      "line-channel-secret",
       "line-notification-target-id",
-      "email-provider-api-key",
+      "gmail-app-password",
     ], secret.purpose)
   }
 
@@ -334,6 +374,18 @@ resource "google_artifact_registry_repository_iam_member" "deployer_writer" {
   repository = google_artifact_registry_repository.ddbox.repository_id
   role       = "roles/artifactregistry.writer"
   member     = "serviceAccount:${google_service_account.deployer.email}"
+}
+
+resource "google_storage_bucket_iam_member" "deployer_build_objects" {
+  bucket = google_storage_bucket.build.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.deployer.email}"
+}
+
+resource "google_storage_bucket_iam_member" "deployer_build_bucket_reader" {
+  bucket = google_storage_bucket.build.name
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${google_service_account.deployer.email}"
 }
 
 resource "google_project_iam_member" "deployer_cloud_run" {

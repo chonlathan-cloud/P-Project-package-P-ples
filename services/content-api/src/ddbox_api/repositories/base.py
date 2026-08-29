@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ddbox_api.domain.models import GalleryItem, PricingBenchmark, StoredLead
+from ddbox_api.domain.models import GalleryItem, LineGroupCandidate, PricingBenchmark, StoredLead
 
 
 class ContentRepository(Protocol):
@@ -31,6 +31,10 @@ class ContentRepository(Protocol):
 
     def mark_notification(self, lead_id: str, status: str) -> None: ...
 
+    def upsert_line_group_candidate(self, candidate: LineGroupCandidate) -> None: ...
+
+    def get_line_group_candidate(self, candidate_id: str) -> LineGroupCandidate | None: ...
+
 
 class NotificationGateway(Protocol):
-    def notify_lead(self, lead: StoredLead) -> None: ...
+    def notify_lead(self, lead: StoredLead) -> str: ...

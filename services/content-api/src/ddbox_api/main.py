@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from ddbox_api.api import admin, media, public, system
+from ddbox_api.api import admin, integrations, media, public, system
 from ddbox_api.auth import (
     FirebaseTokenVerifier,
     TestTokenVerifier,
@@ -26,7 +26,14 @@ from ddbox_api.repositories.base import ContentRepository
 from ddbox_api.repositories.firestore import FirestoreContentRepository
 from ddbox_api.repositories.memory import InMemoryContentRepository
 from ddbox_api.services.gallery import GalleryService
-from ddbox_api.services.leads import LeadService, LoggingNotificationGateway
+from ddbox_api.services.leads import (
+    GmailFallbackNotificationGateway,
+    LeadService,
+    LinePushNotificationGateway,
+    LoggingNotificationGateway,
+    PrimaryWithFallbackNotificationGateway,
+)
+from ddbox_api.services.line_webhook import LineWebhookService
 from ddbox_api.services.media import CloudStorageMediaStore, LocalMediaStore, MediaStore
 from ddbox_api.services.pricing import PricingService
 from ddbox_api.services.rate_limit import InMemoryRateLimiter
@@ -77,6 +84,23 @@ def _media_store(settings: Settings, media_root: Path | None) -> MediaStore:
     )
 
 
+def _notification_gateway(
+    settings: Settings,
+) -> LoggingNotificationGateway | PrimaryWithFallbackNotificationGateway:
+    if settings.notification_backend == "line_gmail":
+        return PrimaryWithFallbackNotificationGateway(
+            LinePushNotificationGateway(
+                settings.line_channel_access_token,
+                settings.line_notification_target_id,
+            ),
+            GmailFallbackNotificationGateway(
+                settings.notification_email,
+                settings.gmail_app_password,
+            ),
+        )
+    return LoggingNotificationGateway()
+
+
 def create_app(
     settings: Settings | None = None,
     repository: ContentRepository | None = None,
@@ -94,9 +118,17 @@ def create_app(
     app.state.settings = active_settings
     app.state.repository = repository or _repository(active_settings)
     app.state.token_verifier = token_verifier or _verifier(active_settings)
-    app.state.gallery_service = GalleryService(app.state.repository)
+    app.state.gallery_service = GalleryService(
+        app.state.repository,
+        active_settings.public_api_url,
+    )
     app.state.pricing_service = PricingService(app.state.repository)
-    app.state.lead_service = LeadService(app.state.repository, LoggingNotificationGateway())
+    app.state.lead_service = LeadService(
+        app.state.repository, _notification_gateway(active_settings)
+    )
+    app.state.line_webhook_service = LineWebhookService(
+        app.state.repository, active_settings.line_channel_secret
+    )
     app.state.media_store = _media_store(active_settings, media_root)
     app.state.revalidation = RevalidationGateway(
         active_settings.web_revalidation_url, active_settings.web_revalidation_token
@@ -173,6 +205,7 @@ def create_app(
 
     app.include_router(system.router)
     app.include_router(public.router)
+    app.include_router(integrations.router)
     app.include_router(admin.router)
     app.include_router(media.router)
     return app

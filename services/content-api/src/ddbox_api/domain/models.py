@@ -204,6 +204,20 @@ class StoredLead(BaseModel):
     notification_status: Literal["pending", "sent", "failed"] = "pending"
 
 
+class LineGroupCandidate(BaseModel):
+    """A LINE group observed through a verified webhook, pending explicit promotion."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(pattern=r"^[0-9a-f]{64}$")
+    group_id: str = Field(pattern=r"^C[0-9a-f]{32}$")
+    bot_user_id: str | None = Field(default=None, pattern=r"^U[0-9a-f]{32}$")
+    event_type: Literal["join", "registration_message"]
+    first_seen_at: datetime
+    last_seen_at: datetime
+    status: Literal["candidate", "active"] = "candidate"
+
+
 class UploadSessionCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -163,6 +163,43 @@ def test_concept_can_publish_without_customer_permission(
     assert publish.status_code == 200
 
 
+def test_public_gallery_resolves_legacy_local_media_origin(
+    client: TestClient, admin_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        "/v1/admin/gallery-items",
+        headers=admin_headers,
+        json={
+            "slug": "legacy-local-media",
+            "title": "ภาพจากข้อมูลเดิม",
+            "summary": "ต้องใช้ public API origin ของ environment ปัจจุบัน",
+            "category": "กล่องกระดาษพับ",
+            "evidence_type": "concept",
+            "images": [
+                {
+                    "id": "legacy-image",
+                    "url": "http://localhost:8000/media/legacy-image/image.webp",
+                    "fallback_url": "http://localhost:8000/media/legacy-image/image.jpg",
+                    "width": 1200,
+                    "height": 900,
+                    "alt": "ภาพจำลองกล่องจากข้อมูลเดิม",
+                }
+            ],
+        },
+    )
+    item = response.json()
+    publish = client.post(
+        f"/v1/admin/publish/gallery-item/{item['id']}",
+        headers=admin_headers,
+        json={"expected_version": 1},
+    )
+    assert publish.status_code == 200
+
+    image = client.get("/v1/gallery-items").json()[0]["images"][0]
+    assert image["url"] == "http://testserver/media/legacy-image/image.webp"
+    assert image["fallback_url"] == "http://testserver/media/legacy-image/image.jpg"
+
+
 def test_gallery_rejects_more_than_twelve_images(
     client: TestClient, admin_headers: dict[str, str]
 ) -> None:

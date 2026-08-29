@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     media_root: Path = Path(".local/media")
     max_upload_bytes: int = 10 * 1024 * 1024
+    notification_backend: Literal["logging", "line_gmail"] = "logging"
+    line_channel_access_token: str = ""
+    line_channel_secret: str = ""
+    line_notification_target_id: str = ""
+    gmail_app_password: str = ""
+    notification_email: str = "paobansawang@gmail.com"
 
     @model_validator(mode="after")
     def validate_environment(self) -> Settings:
@@ -54,6 +60,21 @@ class Settings(BaseSettings):
             raise ValueError("test authentication is allowed only in the test environment")
         if self.media_token_key and len(self.media_token_key) < 32:
             raise ValueError("DDBOX_MEDIA_TOKEN_KEY must contain at least 32 characters")
+        if self.notification_backend == "line_gmail":
+            notification_required = {
+                "DDBOX_LINE_CHANNEL_ACCESS_TOKEN": self.line_channel_access_token,
+                "DDBOX_LINE_CHANNEL_SECRET": self.line_channel_secret,
+                "DDBOX_LINE_NOTIFICATION_TARGET_ID": self.line_notification_target_id,
+                "DDBOX_GMAIL_APP_PASSWORD": self.gmail_app_password,
+                "DDBOX_NOTIFICATION_EMAIL": self.notification_email,
+            }
+            notification_missing = [
+                name for name, value in notification_required.items() if not value
+            ]
+            if notification_missing:
+                raise ValueError(
+                    f"missing notification configuration: {', '.join(notification_missing)}"
+                )
         return self
 
     @property

@@ -1,0 +1,60 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --pull
+      - --build-arg=SITE_URL=${_SITE_URL}
+      - --build-arg=CONTENT_API_URL=${_CONTENT_API_URL}
+      - --build-arg=NEXT_PUBLIC_CONTENT_API_URL=${_CONTENT_API_URL}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=${_FIREBASE_API_KEY}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_PROJECT_ID=the49-487609
+      - --build-arg=NEXT_PUBLIC_FIREBASE_APP_ID=${_FIREBASE_APP_ID}
+      - --tag
+      - asia-southeast1-docker.pkg.dev/the49-487609/ddbox/web:${_IMAGE_TAG}
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - asia-southeast1-docker.pkg.dev/the49-487609/ddbox/web:${_IMAGE_TAG}
+  - name: gcr.io/google.com/cloudsdktool/google-cloud-cli:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        image="asia-southeast1-docker.pkg.dev/the49-487609/ddbox/web:${_IMAGE_TAG}"
+        digest="$$(gcloud artifacts docker images describe "$${image}" --format='value(image_summary.digest)')"
+        test -n "$${digest}"
+        gcloud run deploy ddbox-web-test \
+          --project=the49-487609 \
+          --region=asia-southeast1 \
+          --platform=managed \
+          --image="asia-southeast1-docker.pkg.dev/the49-487609/ddbox/web@$${digest}" \
+          --service-account=ddbox-web-test@the49-487609.iam.gserviceaccount.com \
+          --env-vars-file=deploy/cloudrun-web-test.env.yaml \
+          --set-secrets=CONTENT_API_REVALIDATION_TOKEN=ddbox-test-web-revalidation-token:latest \
+          --port=8080 \
+          --cpu=1 \
+          --memory=512Mi \
+          --concurrency=40 \
+          --timeout=60s \
+          --min=0 \
+          --max=3 \
+          --ingress=all \
+          --no-invoker-iam-check \
+          --labels=application=ddbox,environment=test,managed-by=cloud-build \
+          --quiet
+images:
+  - asia-southeast1-docker.pkg.dev/the49-487609/ddbox/web:${_IMAGE_TAG}
+serviceAccount: projects/the49-487609/serviceAccounts/ddbox-deployer@the49-487609.iam.gserviceaccount.com
+logsBucket: gs://the49-487609-ddbox-build/logs/web-test
+options:
+  logging: GCS_ONLY
+  machineType: E2_HIGHCPU_8
+substitutions:
+  _IMAGE_TAG: required
+  _SITE_URL: required
+  _CONTENT_API_URL: required
+  _FIREBASE_API_KEY: required
+  _FIREBASE_AUTH_DOMAIN: required
+  _FIREBASE_APP_ID: required

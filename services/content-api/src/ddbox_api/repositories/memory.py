@@ -6,6 +6,7 @@ from ddbox_api.domain.errors import ConflictError, NotFoundError
 from ddbox_api.domain.models import (
     ContentStatus,
     GalleryItem,
+    LineGroupCandidate,
     PricingBenchmark,
     StoredLead,
     utc_now,
@@ -19,6 +20,7 @@ class InMemoryContentRepository:
         self._pricing: dict[str, PricingBenchmark] = {}
         self._leads: dict[str, StoredLead] = {}
         self._idempotency: dict[str, str] = {}
+        self._line_group_candidates: dict[str, LineGroupCandidate] = {}
         self._lock = RLock()
 
     def create_gallery_item(self, item: GalleryItem) -> GalleryItem:
@@ -119,3 +121,20 @@ class InMemoryContentRepository:
             if lead is None:
                 raise NotFoundError("lead not found")
             self._leads[lead_id] = lead.model_copy(update={"notification_status": status})
+
+    def upsert_line_group_candidate(self, candidate: LineGroupCandidate) -> None:
+        with self._lock:
+            existing = self._line_group_candidates.get(candidate.id)
+            if existing:
+                candidate = candidate.model_copy(
+                    update={
+                        "first_seen_at": existing.first_seen_at,
+                        "status": existing.status,
+                    }
+                )
+            self._line_group_candidates[candidate.id] = candidate.model_copy(deep=True)
+
+    def get_line_group_candidate(self, candidate_id: str) -> LineGroupCandidate | None:
+        with self._lock:
+            candidate = self._line_group_candidates.get(candidate_id)
+            return candidate.model_copy(deep=True) if candidate else None

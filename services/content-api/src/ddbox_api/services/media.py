@@ -138,14 +138,11 @@ class CloudStorageMediaStore:
     ) -> None:
         if len(token_key) < 32:
             raise ValueError("media token key must contain at least 32 characters")
-        active_credentials = credentials
-        if active_credentials is None:
-            active_credentials, _ = google.auth.default(
-                scopes=["https://www.googleapis.com/auth/cloud-platform"]
-            )
-        self._credentials = active_credentials
-        self._client = client or storage.Client(project=project_id, credentials=active_credentials)
-        self._bucket = self._client.bucket(bucket_name)
+        self._project_id = project_id
+        self._bucket_name = bucket_name
+        self._credentials = credentials
+        self._client = client
+        self._bucket: storage.Bucket | None = None
         self._public_api_url = public_api_url.rstrip("/")
         self._max_upload_bytes = max_upload_bytes
         self._token_key = token_key.encode()
@@ -156,16 +153,19 @@ class CloudStorageMediaStore:
         session_id = uuid4().hex
         expires_at = utc_now() + _UPLOAD_TTL
         token = self._encode_token(session_id, request, expires_at)
-        if not self._credentials.valid or not self._credentials.token:
-            self._credentials.refresh(Request())  # type: ignore[no-untyped-call]
-        upload_url = self._bucket.blob(f"staging/{session_id}/original").generate_signed_url(
+        credentials = self._get_credentials()
+        if not credentials.valid or not credentials.token:
+            credentials.refresh(Request())  # type: ignore[no-untyped-call]
+        upload_url = self._get_bucket().blob(
+            f"staging/{session_id}/original"
+        ).generate_signed_url(
             expiration=expires_at,
             method="PUT",
             content_type=request.content_type,
             version="v4",
-            credentials=self._credentials,
+            credentials=credentials,
             service_account_email=self._signing_service_account,
-            access_token=self._credentials.token,
+            access_token=credentials.token,
         )
         return UploadSession(
             id=session_id,
@@ -180,13 +180,15 @@ class CloudStorageMediaStore:
 
     def finalize(self, session_id: str, token: str) -> MediaAsset:
         request = self._decode_token(session_id, token)
-        metadata_blob = self._bucket.blob(f"ready/{session_id}/metadata.json")
-        if metadata_blob.exists(client=self._client):
+        client = self._get_client()
+        bucket = self._get_bucket()
+        metadata_blob = bucket.blob(f"ready/{session_id}/metadata.json")
+        if metadata_blob.exists(client=client):
             return MediaAsset.model_validate_json(metadata_blob.download_as_bytes())
 
-        source = self._bucket.blob(f"staging/{session_id}/original")
+        source = bucket.blob(f"staging/{session_id}/original")
         try:
-            source.reload(client=self._client)
+            source.reload(client=client)
         except GoogleNotFound as error:
             raise NotFoundError("uploaded media was not found") from error
         if source.size != request.size or source.content_type != request.content_type:
@@ -196,10 +198,10 @@ class CloudStorageMediaStore:
         image, actual_type = _decode_image(raw, request.content_type)
         webp, fallback = _render_variants(image)
         prefix = f"ready/{session_id}"
-        self._bucket.blob(f"{prefix}/image.webp").upload_from_string(
+        bucket.blob(f"{prefix}/image.webp").upload_from_string(
             webp, content_type="image/webp"
         )
-        self._bucket.blob(f"{prefix}/image.jpg").upload_from_string(
+        bucket.blob(f"{prefix}/image.jpg").upload_from_string(
             fallback, content_type="image/jpeg"
         )
         asset = _media_asset(
@@ -212,16 +214,37 @@ class CloudStorageMediaStore:
             public_api_url=self._public_api_url,
         )
         metadata_blob.upload_from_string(asset.model_dump_json(), content_type="application/json")
-        source.delete(client=self._client)
+        source.delete(client=client)
         return asset
 
     def read_variant(self, asset_id: str, filename: str) -> tuple[bytes, str]:
         content_type = _variant_content_type(filename)
-        blob = self._bucket.blob(f"ready/{asset_id}/{filename}")
+        blob = self._get_bucket().blob(f"ready/{asset_id}/{filename}")
         try:
             return blob.download_as_bytes(), content_type
         except GoogleNotFound as error:
             raise NotFoundError("media asset not found") from error
+
+    def _get_credentials(self) -> Credentials:
+        if self._credentials is None:
+            credentials, _ = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+            self._credentials = credentials
+        return self._credentials
+
+    def _get_client(self) -> storage.Client:
+        if self._client is None:
+            self._client = storage.Client(
+                project=self._project_id,
+                credentials=self._get_credentials(),
+            )
+        return self._client
+
+    def _get_bucket(self) -> storage.Bucket:
+        if self._bucket is None:
+            self._bucket = self._get_client().bucket(self._bucket_name)
+        return self._bucket
 
     def _encode_token(
         self, session_id: str, request: UploadSessionCreate, expires_at: datetime

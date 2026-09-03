@@ -19,6 +19,6 @@ describe("company profile contract", () => {
     expect(company.legalName).toContain("ดีดี บ็อกซ์ ปริ้นติ้ง");
     expect(company.profile.foundedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(company.address).toContain("สมุทรปราการ");
-    expect(company.mapHref).toMatch(/^https:\/\/www\.google\.com\/maps\//);
+    expect(company.mapHref).toBe("https://maps.app.goo.gl/MVB6EYu4jifvE5un6");
   });
 });

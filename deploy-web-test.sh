@@ -11,7 +11,7 @@ DDBOX_CONTENT_API_URL="https://ddbox-content-api-test-439060579730.asia-southeas
 DDBOX_SOURCE_BUCKET="gs://the49-487609-ddbox-build/source"
 DDBOX_IMAGE_TAG="${1:-test-$(date -u +%Y%m%d-%H%M%S)}"
 
-for DDBOX_COMMAND in firebase gcloud jq; do
+for DDBOX_COMMAND in gcloud jq; do
   if ! command -v "$DDBOX_COMMAND" >/dev/null 2>&1; then
     echo "Required command not found: $DDBOX_COMMAND" >&2
     exit 1
@@ -25,33 +25,58 @@ fi
 
 cd "$DDBOX_REPO_ROOT"
 
-echo "Resolving Firebase configuration for $DDBOX_FIREBASE_APP_NAME..."
-DDBOX_FIREBASE_APP_ID="$(
-  firebase apps:list \
-    --project "$DDBOX_PROJECT_ID" \
-    --json |
-    jq -er --arg app_name "$DDBOX_FIREBASE_APP_NAME" '
-      first(
-        .result[]
-        | select(.displayName == $app_name and (.platform | ascii_downcase) == "web")
-        | .appId
-      )
-    '
-)"
+read_env_value() {
+  local DDBOX_ENV_KEY="$1"
+  local DDBOX_ENV_LINE=""
+  if [[ -f "$DDBOX_REPO_ROOT/.env" ]]; then
+    DDBOX_ENV_LINE="$(grep -m 1 "^${DDBOX_ENV_KEY}=" "$DDBOX_REPO_ROOT/.env" || true)"
+  fi
+  DDBOX_ENV_LINE="${DDBOX_ENV_LINE#*=}"
+  DDBOX_ENV_LINE="${DDBOX_ENV_LINE%$'\r'}"
+  DDBOX_ENV_LINE="${DDBOX_ENV_LINE#\"}"
+  DDBOX_ENV_LINE="${DDBOX_ENV_LINE%\"}"
+  printf '%s' "$DDBOX_ENV_LINE"
+}
 
-DDBOX_FIREBASE_CONFIG="$(
-  firebase apps:sdkconfig WEB "$DDBOX_FIREBASE_APP_ID" \
-    --project "$DDBOX_PROJECT_ID" \
-    --json
-)"
-DDBOX_FIREBASE_API_KEY="$(
-  printf '%s' "$DDBOX_FIREBASE_CONFIG" |
-    jq -er '.result.sdkConfig.apiKey | select(type == "string" and length > 0)'
-)"
-DDBOX_FIREBASE_AUTH_DOMAIN="$(
-  printf '%s' "$DDBOX_FIREBASE_CONFIG" |
-    jq -er '.result.sdkConfig.authDomain | select(type == "string" and length > 0)'
-)"
+DDBOX_FIREBASE_API_KEY="${NEXT_PUBLIC_FIREBASE_API_KEY:-$(read_env_value NEXT_PUBLIC_FIREBASE_API_KEY)}"
+DDBOX_FIREBASE_AUTH_DOMAIN="${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-$(read_env_value NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN)}"
+DDBOX_FIREBASE_APP_ID="${NEXT_PUBLIC_FIREBASE_APP_ID:-$(read_env_value NEXT_PUBLIC_FIREBASE_APP_ID)}"
+
+if [[ -n "$DDBOX_FIREBASE_API_KEY" && -n "$DDBOX_FIREBASE_AUTH_DOMAIN" && -n "$DDBOX_FIREBASE_APP_ID" ]]; then
+  echo "Using Firebase web configuration from the environment or local .env file."
+else
+  if ! command -v firebase >/dev/null 2>&1; then
+    echo "Firebase configuration is missing and the firebase command is unavailable." >&2
+    exit 1
+  fi
+  echo "Resolving Firebase configuration for $DDBOX_FIREBASE_APP_NAME..."
+  DDBOX_FIREBASE_APP_ID="$(
+    firebase apps:list \
+      --project "$DDBOX_PROJECT_ID" \
+      --json |
+      jq -er --arg app_name "$DDBOX_FIREBASE_APP_NAME" '
+        first(
+          .result[]
+          | select(.displayName == $app_name and (.platform | ascii_downcase) == "web")
+          | .appId
+        )
+      '
+  )"
+
+  DDBOX_FIREBASE_CONFIG="$(
+    firebase apps:sdkconfig WEB "$DDBOX_FIREBASE_APP_ID" \
+      --project "$DDBOX_PROJECT_ID" \
+      --json
+  )"
+  DDBOX_FIREBASE_API_KEY="$(
+    printf '%s' "$DDBOX_FIREBASE_CONFIG" |
+      jq -er '.result.sdkConfig.apiKey | select(type == "string" and length > 0)'
+  )"
+  DDBOX_FIREBASE_AUTH_DOMAIN="$(
+    printf '%s' "$DDBOX_FIREBASE_CONFIG" |
+      jq -er '.result.sdkConfig.authDomain | select(type == "string" and length > 0)'
+  )"
+fi
 
 echo "Submitting DD Box web test build: $DDBOX_IMAGE_TAG"
 gcloud builds submit . \

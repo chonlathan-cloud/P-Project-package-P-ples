@@ -3,6 +3,12 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getProduct, products } from "@/content/products";
+import type { PricingBenchmark } from "@/features/gallery/types";
+import { getPublishedPricing } from "@/lib/content-api";
+import {
+  formatBenchmarkRange,
+  formatStartingPrice,
+} from "@/lib/pricing-format";
 
 export function generateStaticParams() {
   return products.map(({ slug }) => ({ slug }));
@@ -31,6 +37,13 @@ export default async function ProductPage({
   const product = getProduct(slug);
   if (!product) notFound();
   const relatedProducts = products.filter((item) => item.slug !== product.slug);
+  let price: PricingBenchmark | undefined;
+  try {
+    const prices = await getPublishedPricing();
+    price = prices.find((item) => item.id === product.pricingBenchmarkId);
+  } catch {
+    price = undefined;
+  }
 
   return (
     <>
@@ -45,7 +58,7 @@ export default async function ProductPage({
                 className="button"
                 href={`/quote?path=has_specifications&product=${slug}`}
               >
-                ส่งสเปกกล่องประเภทนี้
+                ส่งสเปกงานประเภทนี้
               </Link>
               <Link
                 className="text-link"
@@ -63,7 +76,7 @@ export default async function ProductPage({
               sizes="(max-width: 900px) 100vw, 48vw"
               alt={product.heroAlt}
             />
-            <figcaption>ภาพจำลองเพื่ออธิบายแนวทางของกล่อง</figcaption>
+            <figcaption>ภาพจำลองเพื่ออธิบายแนวทางของงาน</figcaption>
           </figure>
         </div>
       </section>
@@ -83,7 +96,7 @@ export default async function ProductPage({
           </figure>
           <div className="product-fit-copy">
             <p className="eyebrow">PRODUCT FIT</p>
-            <h2>กล่องประเภทนี้เหมาะเมื่อ</h2>
+            <h2>งานประเภทนี้เหมาะเมื่อ</h2>
             <ul className="product-fit-list">
               {product.fit.map((item, index) => (
                 <li key={item}>
@@ -95,6 +108,48 @@ export default async function ProductPage({
           </div>
         </div>
       </section>
+
+      {price ? (
+        <section className="section product-pricing-section">
+          <div className="shell product-pricing-grid">
+            <div>
+              <p className="eyebrow">PRICE BENCHMARK</p>
+              <h2>กรอบงบประมาณก่อนส่งสเปกจริง</h2>
+              <p className="product-pricing-intro">
+                ใช้ตัวเลขนี้เพื่อวางแผนเบื้องต้น
+                ระบบดึงข้อมูลล่าสุดจากฐานข้อมูลและไม่ถือเป็นใบเสนอราคา
+              </p>
+            </div>
+            <div className="product-pricing-data">
+              <p>ราคาเริ่มต้นโดยประมาณ</p>
+              <strong>{formatStartingPrice(price)}</strong>
+              <dl>
+                <div>
+                  <dt>ช่วงราคาอ้างอิง</dt>
+                  <dd>{formatBenchmarkRange(price)}</dd>
+                </div>
+                {price.quantity_basis ? (
+                  <div>
+                    <dt>ฐานจำนวน</dt>
+                    <dd>{price.quantity_basis}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>วัสดุทั่วไป</dt>
+                  <dd>{price.material}</dd>
+                </div>
+              </dl>
+              <small>{price.disclaimer}</small>
+              <Link
+                className="text-link"
+                href={`/quote?path=has_specifications&product=${slug}`}
+              >
+                ส่งสเปกเพื่อประเมินราคาจริง →
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="section product-application-section">
         <div className="shell product-application-grid">
@@ -194,10 +249,10 @@ export default async function ProductPage({
       <section className="related-products">
         <div className="shell related-products-inner">
           <div>
-            <p className="eyebrow">RELATED BOX TYPES</p>
-            <h2>เปรียบเทียบกับกล่องประเภทอื่น</h2>
+            <p className="eyebrow">RELATED SERVICES</p>
+            <h2>เปรียบเทียบกับงานประเภทอื่น</h2>
           </div>
-          <nav aria-label="ประเภทกล่องที่เกี่ยวข้อง">
+          <nav aria-label="สินค้าและงานพิมพ์ที่เกี่ยวข้อง">
             {relatedProducts.map((item) => (
               <Link href={`/products/${item.slug}`} key={item.slug}>
                 <span>{item.number}</span>

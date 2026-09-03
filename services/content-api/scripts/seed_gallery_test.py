@@ -111,6 +111,48 @@ PROJECTS = (
             "ภาพจำลองชิ้นรองกระดาษตั้งแต่แบบคลี่จนประกอบในกล่อง",
         ),
     ),
+    ProjectSeed(
+        item_id="generated-sticker-label-v1",
+        slug="sticker-label-v1",
+        title="สติ๊กเกอร์และฉลากสำหรับผลิตภัณฑ์",
+        summary=(
+            "ตัวอย่างฉลากสำหรับบรรจุภัณฑ์ที่แสดงการใช้งานจริง รูปทรงไดคัท "
+            "และความแตกต่างของวัสดุกระดาษ PP ขาว และ PP ใส"
+        ),
+        category="สติ๊กเกอร์และฉลากสินค้า",
+        source_dir="sticker-label-v1",
+        pricing_id="sticker-label",
+        material="สติ๊กเกอร์กระดาษ / PP ขาว / PP ใส",
+        quantity="ประมาณ 1,000 ดวง",
+        application="ฉลากแบรนด์ ฉลากข้อมูลสินค้า และซีลบรรจุภัณฑ์",
+        alt_texts=(
+            "ภาพจำลองสติ๊กเกอร์และฉลากหลายรูปทรงบนม้วนและแผ่น",
+            "ภาพจำลองฉลากติดบนขวดและกระปุกแก้วสีชาโดยไม่มีตราสินค้า",
+            "ภาพจำลองวัสดุสติ๊กเกอร์กระดาษ PP ขาว และ PP ใส",
+            "ภาพจำลองระยะใกล้ของฉลากไดคัทหลายวัสดุพร้อมหยดน้ำและมุมลอก",
+        ),
+    ),
+    ProjectSeed(
+        item_id="generated-brand-print-media-v1",
+        slug="brand-print-media-v1",
+        title="โบรชัวร์ คู่มือ และสื่อสิ่งพิมพ์แบรนด์",
+        summary=(
+            "ตัวอย่างชุดสื่อสิ่งพิมพ์ที่แสดงความต่างของขนาด จำนวนหน้า "
+            "การพับ และการเข้าเล่ม เพื่อช่วยเตรียม brief ก่อนประเมินงาน"
+        ),
+        category="งานพิมพ์สื่อแบรนด์",
+        source_dir="brand-print-media-v1",
+        pricing_id="brand-print-media",
+        material="กระดาษอาร์ตหรือกระดาษไม่เคลือบตามรูปแบบงาน",
+        quantity="โบรชัวร์หรือแผ่นพับ A4 ประมาณ 500 ชิ้น",
+        application="โบรชัวร์ แผ่นพับ ใบปลิว คู่มือ และแคตตาล็อก",
+        alt_texts=(
+            "ภาพจำลองโบรชัวร์ แผ่นพับ และคู่มือในชุดสีเดียวกัน",
+            "ภาพจำลองแผ่นพิมพ์ โบรชัวร์พับ และคู่มือเปิดหน้า",
+            "ภาพจำลองระยะใกล้ของรอยพับ ขอบตัด และสันเย็บมุงหลัง",
+            "ภาพจำลองมุมบนของโบรชัวร์ แผ่นพับ คู่มือ และแคตตาล็อก",
+        ),
+    ),
 )
 
 
@@ -167,6 +209,32 @@ PRICING = (
         "quantity_basis": None,
         "material": "Art Card / Duplex / Corrugated",
     },
+    {
+        "id": "sticker-label",
+        "label": "สติ๊กเกอร์และฉลากสินค้า",
+        "category": "สติ๊กเกอร์และฉลากสินค้า",
+        "starting_price_min_satang": 50,
+        "starting_price_max_satang": None,
+        "benchmark_min_satang": 50,
+        "benchmark_max_satang": 500,
+        "benchmark_open_ended": False,
+        "unit": "ชิ้น",
+        "quantity_basis": "ประมาณ 1,000 ดวง",
+        "material": "สติ๊กเกอร์กระดาษ / PP ขาว / PP ใส",
+    },
+    {
+        "id": "brand-print-media",
+        "label": "งานพิมพ์สื่อแบรนด์",
+        "category": "งานพิมพ์สื่อแบรนด์",
+        "starting_price_min_satang": 800,
+        "starting_price_max_satang": None,
+        "benchmark_min_satang": 800,
+        "benchmark_max_satang": 2800,
+        "benchmark_open_ended": False,
+        "unit": "ชิ้น",
+        "quantity_basis": "โบรชัวร์หรือแผ่นพับ A4 ประมาณ 500 ชิ้น",
+        "material": "กระดาษอาร์ตหรือกระดาษไม่เคลือบตามรูปแบบงาน",
+    },
 )
 
 
@@ -178,6 +246,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--public-api-url", default="http://localhost:8000")
     parser.add_argument("--asset-root", type=Path)
     parser.add_argument("--local-media-root", type=Path)
+    parser.add_argument(
+        "--only-project",
+        action="append",
+        choices=[project.slug for project in PROJECTS],
+        default=[],
+        help="Seed only the selected project slug; repeat for multiple projects",
+    )
+    parser.add_argument(
+        "--skip-pricing",
+        action="store_true",
+        help="Do not write pricing benchmark documents",
+    )
     parser.add_argument("--apply", action="store_true")
     return parser.parse_args()
 
@@ -226,8 +306,20 @@ def seed(args: argparse.Namespace) -> None:
     bucket = gcs.bucket(args.bucket)
     database = firestore.Client(project=args.project, database=args.database)
     batch = database.batch()
+    selected_slugs = set(args.only_project)
+    selected_projects = tuple(
+        project for project in PROJECTS if not selected_slugs or project.slug in selected_slugs
+    )
+    selected_pricing_ids = {project.pricing_id for project in selected_projects}
+    selected_prices = (
+        ()
+        if args.skip_pricing
+        else tuple(
+            price for price in PRICING if not selected_slugs or price["id"] in selected_pricing_ids
+        )
+    )
 
-    for price in PRICING:
+    for price in selected_prices:
         payload: dict[str, Any] = {
             **price,
             "locale": "th",
@@ -242,7 +334,7 @@ def seed(args: argparse.Namespace) -> None:
         }
         batch.set(database.collection("pricing_benchmarks").document(price["id"]), payload)
 
-    for project in PROJECTS:
+    for project in selected_projects:
         source_files = sorted((asset_root / project.source_dir).glob("*.png"))
         if len(source_files) != len(project.alt_texts):
             raise SystemExit(f"expected {len(project.alt_texts)} images in {project.source_dir}")
@@ -324,12 +416,15 @@ def seed(args: argparse.Namespace) -> None:
             "actor_uid": actor,
             "action": "seed",
             "entity_type": "gallery_test_dataset",
-            "entity_id": "gallery-concepts-v1",
+            "entity_id": ",".join(project.slug for project in selected_projects),
             "created_at": now,
         },
     )
     batch.commit()
-    print(f"seeded {len(PROJECTS)} gallery projects and {len(PRICING)} prices into {DATABASE}")
+    print(
+        f"seeded {len(selected_projects)} gallery projects and "
+        f"{len(selected_prices)} prices into {DATABASE}"
+    )
 
 
 if __name__ == "__main__":

@@ -3,35 +3,17 @@ import Link from "next/link";
 import { ProjectImageGallery } from "@/features/gallery/project-image-gallery";
 import type { GalleryItem, PricingBenchmark } from "@/features/gallery/types";
 import { getPublishedGallery, getPublishedPricing } from "@/lib/content-api";
+import {
+  formatBenchmarkRange,
+  formatStartingPrice,
+} from "@/lib/pricing-format";
 
 export const metadata: Metadata = {
-  title: "ผลงานและราคาเริ่มต้นกล่องบรรจุภัณฑ์",
+  title: "ผลงานและราคาเริ่มต้นงานพิมพ์และบรรจุภัณฑ์",
   description:
-    "ดูแนวทางโครงสร้าง วัสดุ และราคาเริ่มต้นโดยประมาณของงานกล่องบรรจุภัณฑ์",
+    "ดูแนวทางรูปแบบ วัสดุ และราคาเริ่มต้นโดยประมาณของงานพิมพ์และบรรจุภัณฑ์",
   alternates: { canonical: "/gallery" },
 };
-
-function baht(satang: number): string {
-  return new Intl.NumberFormat("th-TH", {
-    minimumFractionDigits: satang % 100 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(satang / 100);
-}
-
-function startingPrice(price: PricingBenchmark): string {
-  const maximum = price.starting_price_max_satang;
-  return maximum && maximum !== price.starting_price_min_satang
-    ? `${baht(price.starting_price_min_satang)}–${baht(maximum)} บาท/${price.unit}`
-    : `${baht(price.starting_price_min_satang)} บาท/${price.unit}`;
-}
-
-function benchmarkRange(price: PricingBenchmark): string {
-  const maximum = price.benchmark_max_satang;
-  const suffix = price.benchmark_open_ended ? "+" : "";
-  return maximum
-    ? `${baht(price.benchmark_min_satang)}–${baht(maximum)}${suffix} บาท/${price.unit}`
-    : `เริ่ม ${baht(price.benchmark_min_satang)} บาท/${price.unit}`;
-}
 
 function Project({
   item,
@@ -81,11 +63,11 @@ function Project({
         {price ? (
           <div className="project-price">
             <p>ราคาเริ่มต้นโดยประมาณ</p>
-            <strong>{startingPrice(price)}</strong>
+            <strong>{formatStartingPrice(price)}</strong>
             <dl>
               <div>
                 <dt>ช่วงราคาอ้างอิง</dt>
-                <dd>{benchmarkRange(price)}</dd>
+                <dd>{formatBenchmarkRange(price)}</dd>
               </div>
               {price.quantity_basis ? (
                 <div>
@@ -151,13 +133,13 @@ export default async function GalleryPage({
       <section className="gallery-hero">
         <div className="shell gallery-hero-layout">
           <div>
-            <p className="eyebrow">PACKAGING REFERENCES</p>
-            <h1>ดูงานจริง เข้าใจโครงสร้าง และเห็นกรอบงบก่อนเริ่มคุย</h1>
+            <p className="eyebrow">PRINT &amp; PACKAGING REFERENCES</p>
+            <h1>ดูงานจริง เข้าใจรูปแบบ และเห็นกรอบงบก่อนเริ่มคุย</h1>
           </div>
           <div className="gallery-hero-copy">
             <p>
-              รวมผลงานที่ได้รับอนุญาตและภาพจำลองเพื่อช่วยเลือกประเภทกล่อง
-              แต่ละรายการแสดงวัสดุ มุมโครงสร้าง
+              รวมผลงานที่ได้รับอนุญาตและภาพจำลองเพื่อช่วยเลือกประเภทงาน
+              แต่ละรายการแสดงวัสดุ รูปแบบ และมุมรายละเอียด
               และราคาเริ่มต้นจากฐานข้อมูลล่าสุด
             </p>
             <p className="gallery-price-caution">
@@ -273,7 +255,7 @@ export default async function GalleryPage({
         <div className="shell gallery-closing-inner">
           <div>
             <p className="eyebrow">YOUR PRODUCT, YOUR SPEC</p>
-            <h2>มีสินค้าแล้ว แต่ยังไม่แน่ใจว่าจะเริ่มจากกล่องแบบไหน?</h2>
+            <h2>มีสินค้าแล้ว แต่ยังไม่แน่ใจว่าจะเริ่มจากงานแบบไหน?</h2>
           </div>
           <Link
             className="button button-yellow"

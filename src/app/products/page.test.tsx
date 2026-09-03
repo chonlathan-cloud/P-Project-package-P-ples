@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import ProductsPage from "./page";
 
 describe("ProductsPage guidance", () => {
-  it("keeps one clear route for customers who need help choosing a box", () => {
+  it("keeps one clear route for customers who need help choosing a service", () => {
     render(<ProductsPage />);
 
     const heading = screen.getByRole("heading", {
-      name: "ยังไม่แน่ใจว่าควรเริ่มจากกล่องแบบไหน",
+      name: "ยังไม่แน่ใจว่าควรเริ่มจากงานแบบไหน",
     });
     const section = heading.closest("section");
 

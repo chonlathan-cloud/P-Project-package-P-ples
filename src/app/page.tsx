@@ -31,6 +31,22 @@ const capabilities = [
     alt: "ภาพจำลองกล่องไดคัทพร้อมชิ้นรองและปลอกกล่อง",
     className: "capability-standard",
   },
+  {
+    title: "สติ๊กเกอร์และฉลากสินค้า",
+    text: "เลือกวัสดุ กาว และรูปทรงจากพื้นผิวและสภาพการใช้งานจริง",
+    href: "/products/sticker-label",
+    image: "/images/generated/sticker-label-hero-v1.webp",
+    alt: "ภาพจำลองสติ๊กเกอร์และฉลากสินค้าหลายรูปทรงโดยไม่มีตราสินค้า",
+    className: "capability-sticker",
+  },
+  {
+    title: "งานพิมพ์สื่อแบรนด์",
+    text: "โบรชัวร์ แผ่นพับ คู่มือ และแคตตาล็อกที่เริ่มจากเนื้อหาและวิธีใช้",
+    href: "/products/brand-print-media",
+    image: "/images/generated/brand-print-media-hero-v1.webp",
+    alt: "ภาพจำลองโบรชัวร์ แผ่นพับ และคู่มือโดยไม่มีตราสินค้า",
+    className: "capability-media",
+  },
 ] as const;
 
 export default async function HomePage() {
@@ -55,14 +71,14 @@ export default async function HomePage() {
         />
         <div className="hero-overlay" aria-hidden="true" />
         <div className="shell hero-content">
-          <p className="eyebrow hero-kicker">CUSTOM PACKAGING</p>
+          <p className="eyebrow hero-kicker">CUSTOM PRINT &amp; PACKAGING</p>
           <h1>
-            กล่องสั่งผลิต
+            งานพิมพ์และกล่องสั่งผลิต
             <br />
             เริ่มจาก brief ที่ชัดเจน
           </h1>
           <p className="lead">
-            มีสเปกพร้อมแล้ว หรือยังไม่แน่ใจว่าควรเริ่มจากกล่องแบบไหน
+            มีสเปกพร้อมแล้ว หรือยังไม่แน่ใจว่าควรเริ่มจากงานแบบไหน
             ส่งข้อมูลเท่าที่มีเพื่อให้ทีมตรวจสอบงาน
           </p>
           <div className="hero-actions">
@@ -86,10 +102,10 @@ export default async function HomePage() {
         <div className="shell section-heading split-heading">
           <div>
             <p className="eyebrow">OUR CAPABILITIES</p>
-            <h2>เลือกประเภทกล่องจากการใช้งานจริง</h2>
+            <h2>เลือกงานพิมพ์จากการใช้งานจริง</h2>
           </div>
           <Link className="text-link" href="/products">
-            ดูประเภทกล่องทั้งหมด →
+            ดูสินค้าและงานพิมพ์ทั้งหมด →
           </Link>
         </div>
         <div className="shell capability-grid">

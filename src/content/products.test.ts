@@ -6,6 +6,7 @@ describe("product content contract", () => {
     const slugs = products.map((product) => product.slug);
 
     expect(new Set(slugs).size).toBe(slugs.length);
+    expect(slugs).toHaveLength(5);
     expect(slugs.every((slug) => getProduct(slug)?.slug === slug)).toBe(true);
   });
 
@@ -13,6 +14,7 @@ describe("product content contract", () => {
     for (const product of products) {
       expect(product.heroImage).toMatch(/^\/images\//);
       expect(product.evidenceImage).toMatch(/^\/images\//);
+      expect(product.pricingBenchmarkId.length).toBeGreaterThan(0);
       expect(product.applications.length).toBeGreaterThanOrEqual(3);
       expect(product.fit.length).toBeGreaterThanOrEqual(3);
       expect(product.brief.length).toBeGreaterThanOrEqual(4);

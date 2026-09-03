@@ -4,8 +4,9 @@ import Link from "next/link";
 import { products } from "@/content/products";
 
 export const metadata: Metadata = {
-  title: "ประเภทกล่อง",
-  description: "สำรวจประเภทกล่องและข้อมูลที่ควรเตรียมก่อนส่งรายละเอียดงาน",
+  title: "สินค้าและงานพิมพ์",
+  description:
+    "สำรวจบรรจุภัณฑ์ สติ๊กเกอร์ ฉลาก และสื่อสิ่งพิมพ์ พร้อมข้อมูลที่ควรเตรียมก่อนส่งรายละเอียดงาน",
   alternates: { canonical: "/products" },
 };
 export default function ProductsPage() {
@@ -13,15 +14,15 @@ export default function ProductsPage() {
     <>
       <section className="page-section products-page">
         <div className="shell page-heading product-page-heading">
-          <p className="eyebrow">BOX TYPES</p>
+          <p className="eyebrow">PRINT &amp; PACKAGING</p>
           <h1>
-            เลือกกล่องจากสินค้า
+            เลือกงานพิมพ์จากสินค้า
             <br />
             และวิธีใช้งานจริง
           </h1>
           <p>
-            เลือกประเภทกล่องเพื่อเตรียมข้อมูลเบื้องต้น ทีมจะตรวจสอบวัสดุ จำนวน
-            และข้อกำหนดก่อนยืนยันการผลิต
+            เลือกประเภทบรรจุภัณฑ์หรือสื่อสิ่งพิมพ์เพื่อเตรียมข้อมูลเบื้องต้น
+            ทีมจะตรวจสอบวัสดุ จำนวน และข้อกำหนดก่อนยืนยันการผลิต
           </p>
         </div>
 
@@ -35,7 +36,7 @@ export default function ProductsPage() {
                   sizes="(max-width: 760px) 100vw, 48vw"
                   alt={product.heroAlt}
                 />
-                <span>ภาพจำลองเพื่ออธิบายประเภทกล่อง</span>
+                <span>ภาพจำลองเพื่ออธิบายประเภทงาน</span>
               </div>
               <div className="product-editorial-copy">
                 <p className="product-number">{product.number}</p>
@@ -62,7 +63,7 @@ export default function ProductsPage() {
                 </div>
 
                 <Link className="text-link" href={`/products/${product.slug}`}>
-                  ดูโครงสร้างและข้อมูลที่ควรเตรียม →
+                  ดูรายละเอียดและข้อมูลที่ควรเตรียม →
                 </Link>
               </div>
             </article>
@@ -74,7 +75,7 @@ export default function ProductsPage() {
         <div className="shell product-guidance-inner">
           <div>
             <p className="eyebrow">CHOOSE YOUR START</p>
-            <h2>ยังไม่แน่ใจว่าควรเริ่มจากกล่องแบบไหน</h2>
+            <h2>ยังไม่แน่ใจว่าควรเริ่มจากงานแบบไหน</h2>
             <p>
               เลือกวิธีเริ่มจากข้อมูลที่มีอยู่ตอนนี้
               แล้วส่งรายละเอียดสินค้าเท่าที่มีให้ทีมช่วยจัด brief

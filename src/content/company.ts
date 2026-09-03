@@ -12,8 +12,7 @@ export const company = {
   facebookHref: "https://www.facebook.com/profile.php?id=100069155223004",
   address:
     "10 หมู่ 7 ถนนวัดศรีวารีน้อย ตำบลบางโฉลง อำเภอบางพลี จังหวัดสมุทรปราการ 10540",
-  mapHref:
-    "https://www.google.com/maps/search/?api=1&query=10+หมู่+7+ถนนวัดศรีวารีน้อย+บางโฉลง+บางพลี+สมุทรปราการ+10540",
+  mapHref: "https://maps.app.goo.gl/MVB6EYu4jifvE5un6",
   sourceUrl: "https://www.ddboxprinting.com/",
   sourceCheckedAt: "2026-08-28",
   profile: {

@@ -15,11 +15,13 @@ export function SiteFooter() {
           />
           <p>เริ่มประเมินบรรจุภัณฑ์จากข้อมูลสินค้า สเปก และข้อจำกัดที่คุณมี</p>
         </div>
-        <nav aria-label="ประเภทกล่อง">
+        <nav aria-label="สินค้าและงานพิมพ์">
           <h2>สินค้า</h2>
           <Link href="/products/folding-carton">กล่องออฟเซ็ท / กระดาษพับ</Link>
           <Link href="/products/corrugated-box">กล่องลูกฟูก / ไปรษณีย์</Link>
           <Link href="/products/custom-die-cut">กล่องไดคัท / ชิ้นรอง</Link>
+          <Link href="/products/sticker-label">สติ๊กเกอร์ / ฉลากสินค้า</Link>
+          <Link href="/products/brand-print-media">งานพิมพ์สื่อแบรนด์</Link>
         </nav>
         <nav aria-label="ข้อมูลและการติดต่อ">
           <h2>ข้อมูล</h2>

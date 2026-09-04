@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     line_channel_access_token: str = ""
     line_channel_secret: str = ""
     line_notification_target_id: str = ""
+    lead_detail_base_url: str = ""
     gmail_app_password: str = ""
     notification_email: str = "paobansawang@gmail.com"
 

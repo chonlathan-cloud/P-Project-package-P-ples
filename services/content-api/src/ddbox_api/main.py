@@ -92,6 +92,8 @@ def _notification_gateway(
             LinePushNotificationGateway(
                 settings.line_channel_access_token,
                 settings.line_notification_target_id,
+                environment=settings.environment,
+                lead_detail_base_url=settings.lead_detail_base_url,
             ),
             GmailFallbackNotificationGateway(
                 settings.notification_email,

@@ -11,6 +11,7 @@ import httpx
 
 from ddbox_api.domain.models import LeadCreate, LeadReceipt, StoredLead, utc_now
 from ddbox_api.repositories.base import ContentRepository, NotificationGateway
+from ddbox_api.services.line_flex import build_lead_flex_message, customer_path_label
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ def format_lead_notification(lead: StoredLead) -> str:
     payload = lead.payload
     lines = [
         f"Lead ใหม่ {lead.reference}",
-        f"จุดเริ่มต้น: {payload.customer_path.value}",
+        f"ประเภทคำขอ: {customer_path_label(payload.customer_path)}",
         f"ประเภทงาน: {payload.product_type}",
         f"จำนวน: {payload.quantity or 'ยังไม่ระบุ'}",
         f"ขนาด: {payload.dimensions or 'ยังไม่ระบุ'}",
@@ -51,10 +52,15 @@ class LinePushNotificationGateway:
         self,
         access_token: str,
         target_id: str,
+        *,
+        environment: str = "production",
+        lead_detail_base_url: str = "",
         client: httpx.Client | None = None,
     ) -> None:
         self._access_token = access_token
         self._target_id = target_id
+        self._environment = environment
+        self._lead_detail_base_url = lead_detail_base_url
         self._client = client or httpx.Client(timeout=10.0)
 
     def notify_lead(self, lead: StoredLead) -> str:
@@ -63,7 +69,13 @@ class LinePushNotificationGateway:
             headers={"Authorization": f"Bearer {self._access_token}"},
             json={
                 "to": self._target_id,
-                "messages": [{"type": "text", "text": format_lead_notification(lead)}],
+                "messages": [
+                    build_lead_flex_message(
+                        lead,
+                        environment=self._environment,
+                        lead_detail_base_url=self._lead_detail_base_url,
+                    )
+                ],
             },
         )
         response.raise_for_status()

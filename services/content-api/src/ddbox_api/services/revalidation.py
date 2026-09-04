@@ -13,6 +13,12 @@ class RevalidationGateway:
         self._token = token
 
     def revalidate_gallery(self) -> None:
+        self.revalidate(["gallery"])
+
+    def revalidate_content(self, resource: str) -> None:
+        self.revalidate([resource])
+
+    def revalidate(self, tags: list[str]) -> None:
         if not self._url:
             logger.info("revalidation_skipped", extra={"reason": "not_configured"})
             return
@@ -20,11 +26,11 @@ class RevalidationGateway:
         try:
             response = httpx.post(
                 self._url,
-                json={"tags": ["gallery"]},
+                json={"tags": tags},
                 headers=headers,
                 timeout=5.0,
             )
             response.raise_for_status()
-            logger.info("revalidation_succeeded", extra={"target": "gallery"})
+            logger.info("revalidation_succeeded", extra={"target": ",".join(tags)})
         except httpx.HTTPError:
-            logger.exception("revalidation_failed", extra={"target": "gallery"})
+            logger.exception("revalidation_failed", extra={"target": ",".join(tags)})

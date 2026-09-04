@@ -11,7 +11,7 @@ steps:
           --image="asia-southeast1-docker.pkg.dev/the49-487609/ddbox/content-api@${_IMAGE_DIGEST}" \
           --service-account=ddbox-api-test@the49-487609.iam.gserviceaccount.com \
           --env-vars-file=deploy/cloudrun-content-api-test.env.yaml \
-          --set-secrets=DDBOX_MEDIA_TOKEN_KEY=ddbox-test-media-token-key:latest,DDBOX_WEB_REVALIDATION_TOKEN=ddbox-test-web-revalidation-token:latest,DDBOX_LINE_CHANNEL_SECRET=ddbox-test-line-channel-secret:latest \
+          --set-secrets=DDBOX_MEDIA_TOKEN_KEY=ddbox-test-media-token-key:latest,DDBOX_WEB_REVALIDATION_TOKEN=ddbox-test-web-revalidation-token:latest,DDBOX_LINE_CHANNEL_ACCESS_TOKEN=ddbox-test-line-channel-access-token:latest,DDBOX_LINE_CHANNEL_SECRET=ddbox-test-line-channel-secret:latest,DDBOX_LINE_NOTIFICATION_TARGET_ID=ddbox-test-line-notification-target-id:latest,DDBOX_GMAIL_APP_PASSWORD=ddbox-test-gmail-app-password:latest \
           --port=8080 \
           --cpu=1 \
           --memory=512Mi \
@@ -22,6 +22,7 @@ steps:
           --execution-environment=gen2 \
           --cpu-boost \
           --ingress=all \
+          --no-invoker-iam-check \
           --labels=application=ddbox,environment=test,managed-by=cloud-build \
           --quiet
 serviceAccount: projects/the49-487609/serviceAccounts/ddbox-deployer@the49-487609.iam.gserviceaccount.com

@@ -5,19 +5,31 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, Query, Request, Response, status
 
 from ddbox_api.auth import AdminPrincipal, require_admin
-from ddbox_api.dependencies import get_gallery_service, get_media_store, get_revalidation
+from ddbox_api.dependencies import (
+    get_gallery_service,
+    get_media_store,
+    get_revalidation,
+    get_structured_content_service,
+)
 from ddbox_api.domain.errors import ValidationError
 from ddbox_api.domain.models import (
+    ContentDocument,
+    ContentKind,
+    ContentResource,
+    ContentUpdateRequest,
+    ContentVersionRequest,
     GalleryItem,
     GalleryItemCreate,
     GalleryPublishRequest,
     MediaAsset,
+    StructuredContent,
     UploadSession,
     UploadSessionCreate,
 )
 from ddbox_api.services.gallery import GalleryService
 from ddbox_api.services.media import MediaStore
 from ddbox_api.services.revalidation import RevalidationGateway
+from ddbox_api.services.structured_content import StructuredContentService
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -86,3 +98,79 @@ def finalize_upload(
     store: Annotated[MediaStore, Depends(get_media_store)],
 ) -> MediaAsset:
     return store.finalize(session_id, token)
+
+
+@router.get("/{resource}", response_model=list[ContentDocument])
+def list_structured_content(
+    resource: ContentResource,
+    _principal: Annotated[AdminPrincipal, Depends(require_admin)],
+    service: Annotated[StructuredContentService, Depends(get_structured_content_service)],
+) -> list[ContentDocument]:
+    return service.list_all(resource.kind)
+
+
+@router.post("/{resource}", response_model=ContentDocument, status_code=status.HTTP_201_CREATED)
+def create_structured_content(
+    resource: ContentResource,
+    payload: StructuredContent,
+    principal: Annotated[AdminPrincipal, Depends(require_admin)],
+    service: Annotated[StructuredContentService, Depends(get_structured_content_service)],
+) -> ContentDocument:
+    return service.create(resource.kind, payload, principal.uid)
+
+
+@router.get("/{resource}/{document_id}", response_model=ContentDocument)
+def get_structured_content(
+    resource: ContentResource,
+    document_id: str,
+    _principal: Annotated[AdminPrincipal, Depends(require_admin)],
+    service: Annotated[StructuredContentService, Depends(get_structured_content_service)],
+) -> ContentDocument:
+    return service.get(resource.kind, document_id)
+
+
+@router.put("/{resource}/{document_id}", response_model=ContentDocument)
+def update_structured_content(
+    resource: ContentResource,
+    document_id: str,
+    payload: ContentUpdateRequest,
+    principal: Annotated[AdminPrincipal, Depends(require_admin)],
+    service: Annotated[StructuredContentService, Depends(get_structured_content_service)],
+) -> ContentDocument:
+    return service.update(
+        resource.kind,
+        document_id,
+        payload.expected_version,
+        payload.content,
+        principal.uid,
+    )
+
+
+@router.post("/publish/{kind}/{document_id}", response_model=ContentDocument)
+def publish_structured_content(
+    kind: ContentKind,
+    document_id: str,
+    payload: ContentVersionRequest,
+    background_tasks: BackgroundTasks,
+    principal: Annotated[AdminPrincipal, Depends(require_admin)],
+    service: Annotated[StructuredContentService, Depends(get_structured_content_service)],
+    revalidation: Annotated[RevalidationGateway, Depends(get_revalidation)],
+) -> ContentDocument:
+    document = service.publish(kind, document_id, payload.expected_version, principal.uid)
+    background_tasks.add_task(revalidation.revalidate_content, f"{kind.value}s")
+    return document
+
+
+@router.post("/archive/{kind}/{document_id}", response_model=ContentDocument)
+def archive_structured_content(
+    kind: ContentKind,
+    document_id: str,
+    payload: ContentVersionRequest,
+    background_tasks: BackgroundTasks,
+    principal: Annotated[AdminPrincipal, Depends(require_admin)],
+    service: Annotated[StructuredContentService, Depends(get_structured_content_service)],
+    revalidation: Annotated[RevalidationGateway, Depends(get_revalidation)],
+) -> ContentDocument:
+    document = service.archive(kind, document_id, payload.expected_version, principal.uid)
+    background_tasks.add_task(revalidation.revalidate_content, f"{kind.value}s")
+    return document

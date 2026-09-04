@@ -43,14 +43,17 @@ describe("ContactPage", () => {
     expect(container).not.toHaveTextContent("ตรวจสอบจากเว็บไซต์เดิม");
   });
 
-  it("labels the generated hero as a development illustration", () => {
+  it("labels the supporting hero without development copy", () => {
     render(<ContactPage />);
 
     const hero = screen.getByRole("img", {
-      name: "ภาพจำลองมือสองคนกำลังตรวจตัวอย่างกล่อง แบบคลี่ และวัสดุกระดาษร่วมกัน",
+      name: "ภาพประกอบมือสองคนกำลังตรวจตัวอย่างกล่อง แบบคลี่ และวัสดุกระดาษร่วมกัน",
     });
 
     expect(hero.getAttribute("src")).toContain("contact-consultation-v1.webp");
-    expect(screen.getByText(/ภาพจำลองสำหรับ development/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/ภาพประกอบเพื่อแนะนำการเตรียมข้อมูล/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/development/i)).not.toBeInTheDocument();
   });
 });

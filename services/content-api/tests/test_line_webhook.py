@@ -6,11 +6,13 @@ import hmac
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from ddbox_api.config import Settings
 from ddbox_api.main import create_app
 from ddbox_api.repositories.memory import InMemoryContentRepository
+from ddbox_api.services import line_webhook as line_webhook_module
 
 CHANNEL_SECRET = "test-line-channel-secret"  # noqa: S105 - isolated test fixture
 GROUP_ID = "C0123456789abcdef0123456789abcdef"
@@ -68,8 +70,17 @@ def test_join_event_records_group_candidate_without_returning_group_id(tmp_path:
     assert candidate.status == "candidate"
 
 
-def test_registration_command_can_capture_an_existing_group(tmp_path: Path) -> None:
+def test_registration_command_can_capture_an_existing_group(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     client, repository = _client(tmp_path)
+    log_record: dict[str, object] = {}
+
+    def capture_log(message: str, *, extra: dict[str, object]) -> None:
+        log_record["message"] = message
+        log_record.update(extra)
+
+    monkeypatch.setattr(line_webhook_module.logger, "info", capture_log)
     body, signature = _signed(
         {
             "destination": BOT_ID,
@@ -92,6 +103,16 @@ def test_registration_command_can_capture_an_existing_group(tmp_path: Path) -> N
     assert response.status_code == 200
     candidate_id = hashlib.sha256(GROUP_ID.encode()).hexdigest()
     assert repository.get_line_group_candidate(candidate_id) is not None
+    assert log_record == {
+        "message": "line_webhook_event_summary",
+        "event_count": 1,
+        "event_types": ["message"],
+        "source_types": ["group"],
+        "registration_message_events": 1,
+        "group_candidates_recorded": 1,
+    }
+    assert GROUP_ID not in str(log_record)
+    assert BOT_ID not in str(log_record)
 
 
 def test_invalid_signature_is_rejected_without_writing(tmp_path: Path) -> None:

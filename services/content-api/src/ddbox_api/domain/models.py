@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Any, Literal
@@ -142,6 +143,234 @@ class GalleryPublishRequest(BaseModel):
     expected_version: int = Field(ge=1)
 
 
+class ContentKind(StrEnum):
+    PRODUCT = "product"
+    OFFER = "offer"
+    FAQ = "faq"
+    PAGE = "page"
+
+
+class ContentResource(StrEnum):
+    PRODUCTS = "products"
+    OFFERS = "offers"
+    FAQS = "faqs"
+    PAGES = "pages"
+
+    @property
+    def kind(self) -> ContentKind:
+        return ContentKind(self.value[:-1])
+
+
+class PlainTextModel(BaseModel):
+    @model_validator(mode="after")
+    def reject_html_markup(self) -> PlainTextModel:
+        values: list[Any] = list(self.model_dump(mode="python").values())
+        while values:
+            value = values.pop()
+            if isinstance(value, str) and re.search(r"<\s*/?\s*[a-zA-Z][^>]*>", value):
+                raise ValueError("HTML markup is not allowed in structured content")
+            if isinstance(value, dict):
+                values.extend(value.values())
+            elif isinstance(value, list):
+                values.extend(value)
+        return self
+
+
+class SeoFields(PlainTextModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: str | None = Field(default=None, max_length=70)
+    description: str | None = Field(default=None, max_length=170)
+    canonical_override: str | None = Field(
+        default=None,
+        pattern=r"^(?:https://[^\s]+|/[a-z0-9/_-]*)$",
+        max_length=2048,
+    )
+    social_image_id: str | None = Field(default=None, min_length=1, max_length=128)
+
+
+class ContentCore(PlainTextModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", min_length=2, max_length=120)
+    locale: Literal["th"] = "th"
+    title: str = Field(min_length=3, max_length=160)
+    summary: str = Field(min_length=3, max_length=500)
+    seo: SeoFields = Field(default_factory=SeoFields)
+
+
+class ContentDetailItem(PlainTextModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: str = Field(min_length=3, max_length=160)
+    description: str = Field(min_length=3, max_length=1000)
+
+
+class ContentImage(PlainTextModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    src: str = Field(pattern=r"^/images/[a-zA-Z0-9/_\-.]+$", max_length=500)
+    alt: str = Field(min_length=3, max_length=300)
+
+
+class ProductContent(ContentCore):
+    kind: Literal[ContentKind.PRODUCT] = ContentKind.PRODUCT
+    display_order: int = Field(default=0, ge=0, le=10_000)
+    category: str = Field(min_length=2, max_length=80)
+    overview: str | None = Field(default=None, max_length=1000)
+    pricing_benchmark_id: str | None = Field(default=None, min_length=3, max_length=120)
+    hero_image: ContentImage | None = None
+    evidence_image: ContentImage | None = None
+    applications: list[ContentDetailItem] = Field(default_factory=list, max_length=12)
+    fit: list[str] = Field(default_factory=list, max_length=12)
+    brief: list[str] = Field(default_factory=list, max_length=12)
+    decisions: list[ContentDetailItem] = Field(default_factory=list, max_length=12)
+    materials: list[str] = Field(default_factory=list, max_length=12)
+    use_cases: list[str] = Field(default_factory=list, max_length=12)
+    moq_guidance: str | None = Field(default=None, max_length=300)
+    lead_time_wording: str | None = Field(default=None, max_length=300)
+    media_ids: list[str] = Field(default_factory=list, max_length=20)
+
+
+class OfferContent(ContentCore):
+    kind: Literal[ContentKind.OFFER] = ContentKind.OFFER
+    display_order: int = Field(default=0, ge=0, le=10_000)
+    label: str | None = Field(default=None, max_length=80)
+    status_label: str | None = Field(default=None, max_length=80)
+    audience: str = Field(min_length=3, max_length=500)
+    quote_path: Literal["needs_guidance", "has_specifications"] = "needs_guidance"
+    inputs: list[str] = Field(default_factory=list, max_length=12)
+    checks: list[ContentDetailItem] = Field(default_factory=list, max_length=12)
+    moq_guidance: str | None = Field(default=None, max_length=300)
+    benefits: list[str] = Field(min_length=1, max_length=12)
+    cta_label: str = Field(min_length=3, max_length=80)
+    cta_href: str = Field(
+        pattern=r"^/[a-z0-9/_-]*(?:\?[a-z0-9_=&-]+)?$",
+        max_length=500,
+    )
+    proof_reference_ids: list[str] = Field(default_factory=list, max_length=20)
+
+
+class FaqContent(ContentCore):
+    kind: Literal[ContentKind.FAQ] = ContentKind.FAQ
+    question: str = Field(min_length=5, max_length=300)
+    answer: str = Field(min_length=10, max_length=3000)
+    page_scopes: list[str] = Field(min_length=1, max_length=20)
+    order: int = Field(default=0, ge=0, le=10_000)
+
+
+class TextPageSection(PlainTextModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    type: Literal["text"] = "text"
+    key: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        max_length=80,
+    )
+    heading: str = Field(min_length=3, max_length=160)
+    paragraphs: list[str] = Field(min_length=1, max_length=12)
+    bullets: list[str] = Field(default_factory=list, max_length=20)
+    items: list[ContentDetailItem] = Field(default_factory=list, max_length=20)
+
+
+class EntityListPageSection(PlainTextModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    type: Literal["entity_list"] = "entity_list"
+    key: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        max_length=80,
+    )
+    heading: str = Field(min_length=3, max_length=160)
+    entity_kind: Literal["products", "offers", "faqs", "gallery_items"]
+    entity_ids: list[str] = Field(min_length=1, max_length=24)
+
+
+class CtaPageSection(PlainTextModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    type: Literal["cta"] = "cta"
+    key: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        max_length=80,
+    )
+    heading: str = Field(min_length=3, max_length=160)
+    body: str = Field(min_length=3, max_length=500)
+    label: str = Field(min_length=3, max_length=80)
+    href: str = Field(
+        pattern=r"^/[a-z0-9/_-]*(?:\?[a-z0-9_=&-]+)?$",
+        max_length=500,
+    )
+
+
+PageSection = Annotated[
+    TextPageSection | EntityListPageSection | CtaPageSection,
+    Field(discriminator="type"),
+]
+
+
+class PageContent(ContentCore):
+    kind: Literal[ContentKind.PAGE] = ContentKind.PAGE
+    sections: list[PageSection] = Field(min_length=1, max_length=30)
+
+
+StructuredContent = Annotated[
+    ProductContent | OfferContent | FaqContent | PageContent,
+    Field(discriminator="kind"),
+]
+
+
+class ContentDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    kind: ContentKind
+    content: StructuredContent
+    published_content: StructuredContent | None = None
+    status: ContentStatus = ContentStatus.DRAFT
+    has_unpublished_changes: bool = True
+    version: int = Field(default=1, ge=1)
+    created_at: datetime
+    updated_at: datetime
+    published_at: datetime | None = None
+    created_by: str
+    updated_by: str
+
+    @model_validator(mode="after")
+    def validate_content_kinds(self) -> ContentDocument:
+        if self.content.kind != self.kind:
+            raise ValueError("content kind must match document kind")
+        if self.published_content and self.published_content.kind != self.kind:
+            raise ValueError("published content kind must match document kind")
+        return self
+
+
+class PublishedContentDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    kind: ContentKind
+    content: StructuredContent
+    version: int = Field(ge=1)
+    published_at: datetime
+
+
+class ContentUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_version: int = Field(ge=1)
+    content: StructuredContent
+
+
+class ContentVersionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_version: int = Field(ge=1)
+
+
 class ContactPreference(StrEnum):
     PHONE = "phone"
     LINE = "line"
@@ -151,6 +380,13 @@ class ContactPreference(StrEnum):
 class CustomerPath(StrEnum):
     HAS_SPECIFICATIONS = "has_specifications"
     NEEDS_GUIDANCE = "needs_guidance"
+
+
+class NotificationStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SENT = "sent"
+    FAILED = "failed"
 
 
 class LeadCreate(BaseModel):
@@ -201,7 +437,12 @@ class StoredLead(BaseModel):
     payload_fingerprint: str
     idempotency_hash: str
     created_at: datetime
-    notification_status: Literal["pending", "sent", "failed"] = "pending"
+    notification_status: NotificationStatus = NotificationStatus.PENDING
+    notification_attempts: int = Field(default=0, ge=0)
+    notification_lease_until: datetime | None = None
+    notification_channel: Literal["logging", "line", "gmail"] | None = None
+    notification_last_error: str | None = Field(default=None, max_length=80)
+    notification_sent_at: datetime | None = None
 
 
 class LineGroupCandidate(BaseModel):

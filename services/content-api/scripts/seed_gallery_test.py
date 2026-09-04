@@ -15,6 +15,12 @@ from PIL import Image
 PROJECT_ID = "the49-487609"
 DATABASE = "ddbox-test"
 BUCKET = "the49-487609-ddbox-media-test"
+PROD_DATABASE = "ddbox-prod"
+PROD_BUCKET = "the49-487609-ddbox-media-prod"
+APPROVED_TARGETS = {
+    (PROJECT_ID, DATABASE, BUCKET): "test",
+    (PROJECT_ID, PROD_DATABASE, PROD_BUCKET): "prod",
+}
 DISCLAIMER = (
     "ราคาเป็นข้อมูลประมาณการเบื้องต้น ราคาจริงขึ้นอยู่กับขนาด จำนวน วัสดุ งานพิมพ์ "
     "และกระบวนการหลังพิมพ์ กรุณาส่งรายละเอียดให้ทีมประเมินราคาอีกครั้ง"
@@ -49,10 +55,10 @@ PROJECTS = (
         quantity="500-1,000 ใบ",
         application="สกินแคร์ เครื่องสำอาง สินค้าขนาดเล็ก",
         alt_texts=(
-            "ภาพจำลองกล่องกระดาษพับสามขนาดบนพื้นสีครีม",
-            "ภาพจำลองกล่องกระดาษพับเปิดฝาพร้อมชิ้นรองสินค้า",
-            "ภาพจำลองระยะใกล้ของฝาพับและพื้นผิวกระดาษ",
-            "ภาพจำลองแบบคลี่และกล่องกระดาษพับที่ประกอบแล้ว",
+            "ภาพแนะนำกล่องกระดาษพับสามขนาดบนพื้นสีครีม",
+            "ภาพแนะนำกล่องกระดาษพับเปิดฝาพร้อมชิ้นรองสินค้า",
+            "ภาพแนะนำระยะใกล้ของฝาพับและพื้นผิวกระดาษ",
+            "ภาพแนะนำแบบคลี่และกล่องกระดาษพับที่ประกอบแล้ว",
         ),
     ),
     ProjectSeed(
@@ -67,10 +73,10 @@ PROJECTS = (
         quantity="ขนาดเล็ก-กลาง",
         application="E-commerce ชุดสินค้า และงานจัดส่ง",
         alt_texts=(
-            "ภาพจำลองกล่องลูกฟูกไปรษณีย์ปิดฝาบนพื้นสีครีม",
-            "ภาพจำลองกล่องลูกฟูกเปิดฝาพร้อมชิ้นรองและขวดสินค้า",
-            "ภาพจำลองระยะใกล้ของลอนกระดาษและลิ้นล็อกกล่อง",
-            "ภาพจำลองกล่องลูกฟูก แบบคลี่ และชิ้นรองหลายมุม",
+            "ภาพแนะนำกล่องลูกฟูกไปรษณีย์ปิดฝาบนพื้นสีครีม",
+            "ภาพแนะนำกล่องลูกฟูกเปิดฝาพร้อมชิ้นรองและขวดสินค้า",
+            "ภาพแนะนำระยะใกล้ของลอนกระดาษและลิ้นล็อกกล่อง",
+            "ภาพแนะนำกล่องลูกฟูก แบบคลี่ และชิ้นรองหลายมุม",
         ),
     ),
     ProjectSeed(
@@ -85,10 +91,10 @@ PROJECTS = (
         quantity="ประเมินตามขนาดและโครงสร้าง",
         application="สินค้าที่ต้องการโครงสร้างเฉพาะและการป้องกันเพิ่ม",
         alt_texts=(
-            "ภาพจำลองกล่องไดคัทลูกฟูกเปิดฝาพร้อมโครงสร้างรองรับ",
-            "ภาพจำลองกล่องไดคัทพร้อมชิ้นรองสำหรับกระปุกสินค้า",
-            "ภาพจำลองระยะใกล้ของลิ้นล็อกและขอบลูกฟูกไดคัท",
-            "ภาพจำลองแบบคลี่ กล่องกึ่งประกอบ และกล่องไดคัทสำเร็จ",
+            "ภาพแนะนำกล่องไดคัทลูกฟูกเปิดฝาพร้อมโครงสร้างรองรับ",
+            "ภาพแนะนำกล่องไดคัทพร้อมชิ้นรองสำหรับกระปุกสินค้า",
+            "ภาพแนะนำระยะใกล้ของลิ้นล็อกและขอบลูกฟูกไดคัท",
+            "ภาพแนะนำแบบคลี่ กล่องกึ่งประกอบ และกล่องไดคัทสำเร็จ",
         ),
     ),
     ProjectSeed(
@@ -105,10 +111,10 @@ PROJECTS = (
         quantity="ประเมินร่วมกับกล่องและจำนวนช่อง",
         application="Gift set ชุดเครื่องสำอาง และสินค้าหลายชิ้น",
         alt_texts=(
-            "ภาพจำลองชิ้นรองกระดาษในกล่องชุดผลิตภัณฑ์สามชิ้น",
-            "ภาพจำลองกล่อง ชิ้นรอง แบบคลี่ และผลิตภัณฑ์จากมุมบน",
-            "ภาพจำลองระยะใกล้ของจุดล็อกและช่องวางบนชิ้นรองกระดาษ",
-            "ภาพจำลองชิ้นรองกระดาษตั้งแต่แบบคลี่จนประกอบในกล่อง",
+            "ภาพแนะนำชิ้นรองกระดาษในกล่องชุดผลิตภัณฑ์สามชิ้น",
+            "ภาพแนะนำกล่อง ชิ้นรอง แบบคลี่ และผลิตภัณฑ์จากมุมบน",
+            "ภาพแนะนำระยะใกล้ของจุดล็อกและช่องวางบนชิ้นรองกระดาษ",
+            "ภาพแนะนำชิ้นรองกระดาษตั้งแต่แบบคลี่จนประกอบในกล่อง",
         ),
     ),
     ProjectSeed(
@@ -126,10 +132,10 @@ PROJECTS = (
         quantity="ประมาณ 1,000 ดวง",
         application="ฉลากแบรนด์ ฉลากข้อมูลสินค้า และซีลบรรจุภัณฑ์",
         alt_texts=(
-            "ภาพจำลองสติ๊กเกอร์และฉลากหลายรูปทรงบนม้วนและแผ่น",
-            "ภาพจำลองฉลากติดบนขวดและกระปุกแก้วสีชาโดยไม่มีตราสินค้า",
-            "ภาพจำลองวัสดุสติ๊กเกอร์กระดาษ PP ขาว และ PP ใส",
-            "ภาพจำลองระยะใกล้ของฉลากไดคัทหลายวัสดุพร้อมหยดน้ำและมุมลอก",
+            "ภาพแนะนำสติ๊กเกอร์และฉลากหลายรูปทรงบนม้วนและแผ่น",
+            "ภาพแนะนำฉลากติดบนขวดและกระปุกแก้วสีชาโดยไม่มีตราสินค้า",
+            "ภาพแนะนำวัสดุสติ๊กเกอร์กระดาษ PP ขาว และ PP ใส",
+            "ภาพแนะนำระยะใกล้ของฉลากไดคัทหลายวัสดุพร้อมหยดน้ำและมุมลอก",
         ),
     ),
     ProjectSeed(
@@ -147,10 +153,10 @@ PROJECTS = (
         quantity="โบรชัวร์หรือแผ่นพับ A4 ประมาณ 500 ชิ้น",
         application="โบรชัวร์ แผ่นพับ ใบปลิว คู่มือ และแคตตาล็อก",
         alt_texts=(
-            "ภาพจำลองโบรชัวร์ แผ่นพับ และคู่มือในชุดสีเดียวกัน",
-            "ภาพจำลองแผ่นพิมพ์ โบรชัวร์พับ และคู่มือเปิดหน้า",
-            "ภาพจำลองระยะใกล้ของรอยพับ ขอบตัด และสันเย็บมุงหลัง",
-            "ภาพจำลองมุมบนของโบรชัวร์ แผ่นพับ คู่มือ และแคตตาล็อก",
+            "ภาพแนะนำโบรชัวร์ แผ่นพับ และคู่มือในชุดสีเดียวกัน",
+            "ภาพแนะนำแผ่นพิมพ์ โบรชัวร์พับ และคู่มือเปิดหน้า",
+            "ภาพแนะนำระยะใกล้ของรอยพับ ขอบตัด และสันเย็บมุงหลัง",
+            "ภาพแนะนำมุมบนของโบรชัวร์ แผ่นพับ คู่มือ และแคตตาล็อก",
         ),
     ),
 )
@@ -239,7 +245,7 @@ PRICING = (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Seed approved gallery concepts into test only")
+    parser = argparse.ArgumentParser(description="Seed approved Gallery concept records")
     parser.add_argument("--project", required=True)
     parser.add_argument("--database", required=True)
     parser.add_argument("--bucket", required=True)
@@ -259,16 +265,51 @@ def parse_args() -> argparse.Namespace:
         help="Do not write pricing benchmark documents",
     )
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument(
+        "--confirm-target",
+        help="Required with --apply; must exactly equal PROJECT/DATABASE/BUCKET.",
+    )
     return parser.parse_args()
 
 
-def guard_test_targets(args: argparse.Namespace) -> None:
-    expected = (PROJECT_ID, DATABASE, BUCKET)
+def guard_targets(args: argparse.Namespace) -> str:
     actual = (args.project, args.database, args.bucket)
-    if actual != expected:
-        raise SystemExit(f"refusing non-test target: expected {expected}, received {actual}")
-    if not args.apply:
-        raise SystemExit("dry run only; pass --apply after reviewing the exact test targets")
+    environment = APPROVED_TARGETS.get(actual)
+    if environment is None:
+        raise SystemExit(f"refusing unapproved target: {actual}")
+    target = "/".join(actual)
+    if args.apply and args.confirm_target != target:
+        raise SystemExit(f"--confirm-target must exactly equal {target}")
+    return environment
+
+
+def plan(args: argparse.Namespace, environment: str) -> None:
+    repository_root = Path(__file__).resolve().parents[3]
+    asset_root = args.asset_root or repository_root / "assets" / "gallery-source"
+    selected_slugs = set(args.only_project)
+    selected_projects = tuple(
+        project for project in PROJECTS if not selected_slugs or project.slug in selected_slugs
+    )
+    for project in selected_projects:
+        source_files = sorted((asset_root / project.source_dir).glob("*.png"))
+        if len(source_files) != len(project.alt_texts):
+            raise SystemExit(f"expected {len(project.alt_texts)} images in {project.source_dir}")
+    selected_pricing_ids = {project.pricing_id for project in selected_projects}
+    price_count = 0 if args.skip_pricing else len(selected_pricing_ids)
+    print(
+        json.dumps(
+            {
+                "mode": "plan",
+                "environment": environment,
+                "target": f"{args.project}/{args.database}/{args.bucket}",
+                "gallery_items": len(selected_projects),
+                "pricing_benchmarks": price_count,
+                "media_assets": sum(len(project.alt_texts) for project in selected_projects),
+                "slugs": [project.slug for project in selected_projects],
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 def render_variants(source: Path) -> tuple[bytes, bytes, int, int, str]:
@@ -295,12 +336,12 @@ def upload_variant(blob: storage.Blob, body: bytes, content_type: str) -> None:
     blob.patch()
 
 
-def seed(args: argparse.Namespace) -> None:
+def seed(args: argparse.Namespace, environment: str) -> None:
     repository_root = Path(__file__).resolve().parents[3]
     asset_root = args.asset_root or repository_root / "assets" / "gallery-source"
     local_media_root = args.local_media_root
     now = datetime.now(UTC)
-    actor = "seed-gallery-test"
+    actor = f"seed-gallery-{environment}"
     public_api_url = args.public_api_url.rstrip("/")
     gcs = storage.Client(project=args.project)
     bucket = gcs.bucket(args.bucket)
@@ -415,7 +456,7 @@ def seed(args: argparse.Namespace) -> None:
         {
             "actor_uid": actor,
             "action": "seed",
-            "entity_type": "gallery_test_dataset",
+            "entity_type": "gallery_concept_dataset",
             "entity_id": ",".join(project.slug for project in selected_projects),
             "created_at": now,
         },
@@ -423,11 +464,14 @@ def seed(args: argparse.Namespace) -> None:
     batch.commit()
     print(
         f"seeded {len(selected_projects)} gallery projects and "
-        f"{len(selected_prices)} prices into {DATABASE}"
+        f"{len(selected_prices)} prices into {args.database}"
     )
 
 
 if __name__ == "__main__":
     arguments = parse_args()
-    guard_test_targets(arguments)
-    seed(arguments)
+    target_environment = guard_targets(arguments)
+    if arguments.apply:
+        seed(arguments, target_environment)
+    else:
+        plan(arguments, target_environment)

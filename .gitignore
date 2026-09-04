@@ -18,6 +18,7 @@ __pycache__/
 .local/
 services/content-api/.local/
 .stitch/reference/
+firebase-debug.log
 
 # Terraform local state and plans
 **/.terraform/

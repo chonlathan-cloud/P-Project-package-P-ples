@@ -1,63 +1,78 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { GalleryGrid } from "@/components/gallery-grid";
 import { getApprovedClientBrands } from "@/content/client-brands";
-import { solutions } from "@/content/solutions";
+import { byDisplayOrder, pageSection } from "@/features/content/types";
 import type { GalleryItem } from "@/features/gallery/types";
-import { getPublishedGallery } from "@/lib/content-api";
+import {
+  getPublishedGallery,
+  getPublishedOffers,
+  getPublishedPage,
+  getPublishedProducts,
+} from "@/lib/content-api";
 
-const capabilities = [
-  {
-    title: "กล่องออฟเซ็ทและกล่องกระดาษพับ",
-    text: "จัด brief จากสินค้า ขนาด วัสดุ และพื้นที่งานพิมพ์",
-    href: "/products/folding-carton",
-    image: "/images/generated/cosmetic-folding-carton-v2.webp",
-    alt: "ภาพจำลองกล่องกระดาษพับหลายขนาดโดยไม่มีตราสินค้า",
-    className: "capability-wide",
-  },
-  {
-    title: "กล่องลูกฟูกและกล่องไปรษณีย์",
-    text: "เริ่มจากน้ำหนัก รูปแบบบรรจุ การขนส่ง และการซ้อน",
-    href: "/products/corrugated-box",
-    image: "/images/generated/corrugated-structure-v2.webp",
-    alt: "ภาพจำลองกล่องลูกฟูกและชิ้นรองไดคัทโดยไม่มีตราสินค้า",
-    className: "capability-tall",
-  },
-  {
-    title: "กล่องไดคัทและชิ้นรองสินค้า",
-    text: "กำหนดวิธีเปิด ปิด และจัดวางให้สอดคล้องกับสินค้า",
-    href: "/products/custom-die-cut",
-    image: "/images/generated/premium-die-cut-v2.webp",
-    alt: "ภาพจำลองกล่องไดคัทพร้อมชิ้นรองและปลอกกล่อง",
-    className: "capability-standard",
-  },
-  {
-    title: "สติ๊กเกอร์และฉลากสินค้า",
-    text: "เลือกวัสดุ กาว และรูปทรงจากพื้นผิวและสภาพการใช้งานจริง",
-    href: "/products/sticker-label",
-    image: "/images/generated/sticker-label-hero-v1.webp",
-    alt: "ภาพจำลองสติ๊กเกอร์และฉลากสินค้าหลายรูปทรงโดยไม่มีตราสินค้า",
-    className: "capability-sticker",
-  },
-  {
-    title: "งานพิมพ์สื่อแบรนด์",
-    text: "โบรชัวร์ แผ่นพับ คู่มือ และแคตตาล็อกที่เริ่มจากเนื้อหาและวิธีใช้",
-    href: "/products/brand-print-media",
-    image: "/images/generated/brand-print-media-hero-v1.webp",
-    alt: "ภาพจำลองโบรชัวร์ แผ่นพับ และคู่มือโดยไม่มีตราสินค้า",
-    className: "capability-media",
-  },
+const capabilityClasses = [
+  "capability-wide",
+  "capability-tall",
+  "capability-standard",
+  "capability-sticker",
+  "capability-media",
 ] as const;
+
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const page = await getPublishedPage("home");
+    return {
+      title: page.content.seo.title ?? page.content.title,
+      description: page.content.seo.description ?? page.content.summary,
+      alternates: { canonical: page.content.seo.canonical_override ?? "/" },
+    };
+  } catch {
+    return { title: "DD Box Printing", robots: { index: false } };
+  }
+}
 
 export default async function HomePage() {
   const clientBrands = getApprovedClientBrands();
-  let gallery: GalleryItem[] = [];
-  try {
-    const published = await getPublishedGallery();
-    gallery = published.slice(0, 4);
-  } catch {
-    gallery = [];
+  const [pageResult, productsResult, offersResult, galleryResult] =
+    await Promise.allSettled([
+      getPublishedPage("home"),
+      getPublishedProducts(),
+      getPublishedOffers(),
+      getPublishedGallery(),
+    ]);
+
+  if (pageResult.status === "rejected") {
+    return (
+      <section className="section shell error-state" role="status">
+        <h1>ยังโหลดข้อมูลหน้าแรกไม่ได้</h1>
+        <p>ลองโหลดหน้านี้อีกครั้ง หรือส่งรายละเอียดงานให้ทีมตรวจสอบได้โดยตรง</p>
+        <Link className="button" href="/quote">
+          ส่งรายละเอียดงาน
+        </Link>
+      </section>
+    );
   }
+
+  const page = pageResult.value;
+  const hero = pageSection(page, "hero", "text");
+  const productSection = pageSection(page, "products", "entity_list");
+  const capabilitySection = pageSection(page, "capabilities", "text");
+  const offerSection = pageSection(page, "offers", "entity_list");
+  const processSection = pageSection(page, "process", "text");
+  const closing = pageSection(page, "closing", "cta");
+  const products =
+    productsResult.status === "fulfilled"
+      ? productsResult.value.toSorted(byDisplayOrder)
+      : [];
+  const offers =
+    offersResult.status === "fulfilled"
+      ? offersResult.value.toSorted(byDisplayOrder)
+      : [];
+  const gallery: GalleryItem[] =
+    galleryResult.status === "fulfilled" ? galleryResult.value.slice(0, 4) : [];
+
   return (
     <>
       <section className="storefront-hero">
@@ -67,20 +82,13 @@ export default async function HomePage() {
           fill
           priority
           sizes="100vw"
-          alt="ภาพจำลองพื้นที่ผลิตสิ่งพิมพ์และเครื่องพิมพ์ออฟเซ็ต"
+          alt="ภาพประกอบพื้นที่ผลิตสิ่งพิมพ์และเครื่องพิมพ์ออฟเซ็ต"
         />
         <div className="hero-overlay" aria-hidden="true" />
         <div className="shell hero-content">
           <p className="eyebrow hero-kicker">CUSTOM PRINT &amp; PACKAGING</p>
-          <h1>
-            งานพิมพ์และกล่องสั่งผลิต
-            <br />
-            เริ่มจาก brief ที่ชัดเจน
-          </h1>
-          <p className="lead">
-            มีสเปกพร้อมแล้ว หรือยังไม่แน่ใจว่าควรเริ่มจากงานแบบไหน
-            ส่งข้อมูลเท่าที่มีเพื่อให้ทีมตรวจสอบงาน
-          </p>
+          <h1>{hero?.heading ?? page.content.title}</h1>
+          <p className="lead">{hero?.paragraphs[0] ?? page.content.summary}</p>
           <div className="hero-actions">
             <Link
               className="button button-yellow"
@@ -102,51 +110,66 @@ export default async function HomePage() {
         <div className="shell section-heading split-heading">
           <div>
             <p className="eyebrow">OUR CAPABILITIES</p>
-            <h2>เลือกงานพิมพ์จากการใช้งานจริง</h2>
+            <h2>{productSection?.heading ?? "สินค้าและงานพิมพ์ที่เผยแพร่"}</h2>
           </div>
           <Link className="text-link" href="/products">
             ดูสินค้าและงานพิมพ์ทั้งหมด →
           </Link>
         </div>
-        <div className="shell capability-grid">
-          {capabilities.map((item) => (
-            <Link
-              className={`capability-card ${item.className}`}
-              href={item.href}
-              key={item.href}
-            >
-              <Image
-                src={item.image}
-                fill
-                sizes="(max-width: 760px) 100vw, 60vw"
-                alt={item.alt}
-              />
-              <span className="capability-shade" aria-hidden="true" />
-              <span className="capability-copy">
-                <strong>{item.title}</strong>
-                <small>{item.text}</small>
-              </span>
-            </Link>
-          ))}
-        </div>
+        {productsResult.status === "rejected" ? (
+          <div className="shell error-state" role="status">
+            <h2>ยังโหลดรายการสินค้าไม่ได้</h2>
+            <p>
+              ดูข้อมูลเพิ่มเติมอีกครั้งภายหลัง หรือส่งรายละเอียดให้ทีมช่วยแนะนำ
+            </p>
+          </div>
+        ) : products.length > 0 ? (
+          <div className="shell capability-grid">
+            {products.map(({ content: product }, index) => (
+              <Link
+                className={`capability-card ${capabilityClasses[index] ?? "capability-standard"}`}
+                href={`/products/${product.slug}`}
+                key={product.slug}
+              >
+                {product.hero_image ? (
+                  <Image
+                    src={product.hero_image.src}
+                    fill
+                    sizes="(max-width: 760px) 100vw, 60vw"
+                    alt={product.hero_image.alt}
+                  />
+                ) : null}
+                <span className="capability-shade" aria-hidden="true" />
+                <span className="capability-copy">
+                  <strong>{product.title}</strong>
+                  <small>{product.summary}</small>
+                </span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="shell empty-state">
+            <h2>ยังไม่มีสินค้าที่เผยแพร่</h2>
+            <p>ส่งรายละเอียดสินค้าให้ทีมช่วยเลือกประเภทงานได้โดยตรง</p>
+          </div>
+        )}
       </section>
 
-      <section className="workflow-proof" aria-label="หลักการเริ่มประเมินงาน">
-        <div className="shell proof-grid">
-          <div>
-            <strong>Offset</strong>
-            <span>งานพิมพ์และกล่องกระดาษสำหรับภาคอุตสาหกรรม</span>
+      {capabilitySection?.items.length ? (
+        <section
+          className="workflow-proof"
+          aria-label={capabilitySection.heading}
+        >
+          <div className="shell proof-grid">
+            {capabilitySection.items.map((item) => (
+              <div key={item.title}>
+                <strong>{item.title}</strong>
+                <span>{item.description}</span>
+              </div>
+            ))}
           </div>
-          <div>
-            <strong>Board</strong>
-            <span>กล่องกระดาษพับ กล่องพรีเมี่ยม และกล่องจั่วปัง</span>
-          </div>
-          <div>
-            <strong>Flute</strong>
-            <span>กล่องลูกฟูก 3 ชั้น 5 ชั้น และชิ้นรองสินค้า</span>
-          </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="section proof-intro">
         <div className="shell section-heading split-heading">
@@ -167,56 +190,54 @@ export default async function HomePage() {
         <div className="shell offers-layout">
           <div className="section-heading">
             <p className="eyebrow">CHOOSE YOUR START</p>
-            <h2>งานแต่ละสถานการณ์ เริ่มเตรียมข้อมูลต่างกัน</h2>
+            <h2>{offerSection?.heading ?? "วิธีเริ่มงานที่เผยแพร่"}</h2>
           </div>
-          <div className="offer-rows">
-            {solutions.map((solution) => (
-              <Link href={`/solutions/${solution.slug}`} key={solution.slug}>
-                <span>{solution.number}</span>
-                <h3>{solution.status}</h3>
-                <p>{solution.title}</p>
-                <strong>ดูวิธีเริ่มงาน →</strong>
-              </Link>
-            ))}
-          </div>
+          {offersResult.status === "rejected" ? (
+            <div className="error-state" role="status">
+              <h2>ยังโหลดวิธีเริ่มงานไม่ได้</h2>
+              <p>ส่งข้อมูลที่มีให้ทีมช่วยจัด brief ได้โดยตรง</p>
+            </div>
+          ) : offers.length > 0 ? (
+            <div className="offer-rows">
+              {offers.map(({ content: offer }, index) => (
+                <Link href={`/solutions/${offer.slug}`} key={offer.slug}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <h3>{offer.status_label ?? offer.title}</h3>
+                  <p>{offer.title}</p>
+                  <strong>ดูวิธีเริ่มงาน →</strong>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <h2>ยังไม่มีวิธีเริ่มงานที่เผยแพร่</h2>
+              <p>ส่งข้อมูลเท่าที่มีให้ทีมช่วยจัดลำดับได้โดยตรง</p>
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="section process-section">
-        <div className="shell process-grid">
-          <div>
-            <p className="eyebrow">BRIEF TO EVALUATION</p>
-            <h2>
-              ข้อมูลชัดขึ้น
-              <br />
-              ประเมินงานได้ตรงขึ้น
-            </h2>
+      {processSection?.items.length ? (
+        <section className="section process-section">
+          <div className="shell process-grid">
+            <div>
+              <p className="eyebrow">BRIEF TO EVALUATION</p>
+              <h2>{processSection.heading}</h2>
+            </div>
+            <ol>
+              {processSection.items.map((item, index) => (
+                <li key={item.title}>
+                  <span>{index + 1}</span>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
-          <ol>
-            <li>
-              <span>1</span>
-              <div>
-                <h3>เลือกจุดเริ่ม</h3>
-                <p>ส่งสเปกที่มี หรืออธิบายสินค้าและข้อจำกัด</p>
-              </div>
-            </li>
-            <li>
-              <span>2</span>
-              <div>
-                <h3>เติมรายละเอียด</h3>
-                <p>ระบุจำนวน ขนาด กำหนดใช้ และพื้นที่จัดส่งเท่าที่ทราบ</p>
-              </div>
-            </li>
-            <li>
-              <span>3</span>
-              <div>
-                <h3>ทีมตรวจสอบ</h3>
-                <p>ข้อมูลจะถูกส่งให้ทีมงานประเมินผ่านช่องทางที่คุณเลือก</p>
-              </div>
-            </li>
-          </ol>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {clientBrands.length > 0 && (
         <section
@@ -232,7 +253,6 @@ export default async function HomePage() {
                 และอนุญาตให้เผยแพร่ชื่อและโลโก้บนเว็บไซต์
               </p>
             </div>
-
             <ul className="client-logo-grid">
               {clientBrands.map((brand) => (
                 <li key={brand.id}>
@@ -251,16 +271,18 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="section closing-cta">
-        <div className="shell closing-cta-inner">
-          <p className="eyebrow">START YOUR PROJECT</p>
-          <h2>พร้อมส่งรายละเอียดกล่องของคุณหรือยัง</h2>
-          <p>เริ่มจากสเปกที่มี หรือให้ระบบช่วยจัดลำดับข้อมูลที่ต้องเตรียม</p>
-          <Link className="button" href="/quote">
-            ส่งรายละเอียดเพื่อขอราคา
-          </Link>
-        </div>
-      </section>
+      {closing ? (
+        <section className="section closing-cta">
+          <div className="shell closing-cta-inner">
+            <p className="eyebrow">START YOUR PROJECT</p>
+            <h2>{closing.heading}</h2>
+            <p>{closing.body}</p>
+            <Link className="button" href={closing.href}>
+              {closing.label}
+            </Link>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

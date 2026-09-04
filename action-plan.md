@@ -1,6 +1,6 @@
 # DD Box Printing Website — Action Plan
 
-Status: implementation in progress; local vertical slice, shared-project GCP foundation, Firebase admin, test runtime secrets, and both public test Cloud Run services are deployed; LINE Group promotion, production secrets/deployment, and remaining launch inputs are tracked in `docs/decisions/launch-blockers.md`
+Status: implementation in progress; Test is deployed and live-verified. The Production foundation, CMS/Gallery content, and LINE-only Content API are deployed behind the Cloud Run URL; the Production Web, canonical-domain cutover, Gmail fallback, and remaining launch inputs are tracked in `docs/decisions/launch-blockers.md`.
 Target: conversion-focused, SEO-ready DD Box Printing website with a structured admin CMS
 GCP discovery project: `the49-487609`
 
@@ -339,9 +339,10 @@ Use RESTful list/create/read/update/archive operations. Prefer archive/unpublish
 
 1. Admin requests an upload session from the API.
 2. API validates filename, declared type, size, and purpose, then creates a short-lived upload target in a staging prefix.
-3. Upload finalization verifies actual MIME/type, decodes the image, strips unsafe metadata, records dimensions/checksum, and creates optimized AVIF/WebP plus fallback variants.
-4. API moves/marks the asset as ready and creates `media_assets` metadata.
-5. Orphan staging objects expire through lifecycle policy.
+3. The media bucket allows signed `PUT` uploads only from the exact configured web origins; never use a wildcard CORS origin for admin uploads.
+4. Upload finalization verifies actual MIME/type, decodes the image, strips unsafe metadata, records dimensions/checksum, and creates optimized AVIF/WebP plus fallback variants.
+5. API moves/marks the asset as ready and creates `media_assets` metadata.
+6. Orphan staging objects expire through lifecycle policy.
 
 Do not proxy large original uploads through the web frontend. Reject SVG uploads unless a safe sanitization pipeline is implemented.
 
@@ -352,6 +353,7 @@ Do not proxy large original uploads through the web frontend. Reject SVG uploads
 - Provision the initial admin identity out-of-band.
 - Store only the authorization claim `admin=true`; there are no additional application roles in v1.
 - Verify ID-token issuer, audience/project, signature, expiry, revocation policy, and `admin` claim server-side.
+- Grant the API runtime identity only `firebaseauth.users.get` so revocation and disabled-user checks can read Firebase user state without broader Firebase administration access.
 - Do not trust client route guards as authorization.
 - Require recent authentication for account-sensitive operations if later added.
 - Use secure, HTTP-only session cookies for the Next.js admin surface where practical; protect state-changing cookie-authenticated requests against CSRF.

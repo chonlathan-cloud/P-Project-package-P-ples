@@ -33,7 +33,7 @@ function Project({
         </div>
         <p className="project-kicker">
           {item.evidence_type === "concept"
-            ? "ภาพจำลอง"
+            ? "ภาพแนะนำ"
             : "ผลงานที่ได้รับอนุญาต"}
           <span aria-hidden="true"> / </span>
           {item.category}
@@ -117,9 +117,12 @@ export default async function GalleryPage({
   }
 
   const categories = [...new Set(items.map((item) => item.category))];
+  const recommendedItems = items.filter(
+    (item) => item.evidence_type === "concept",
+  );
   const visibleItems = selectedCategory
     ? items.filter((item) => item.category === selectedCategory)
-    : items;
+    : recommendedItems;
   const priceById = new Map(prices.map((price) => [price.id, price]));
   const customerWork = visibleItems.filter(
     (item) => item.evidence_type === "customer_work",
@@ -138,7 +141,7 @@ export default async function GalleryPage({
           </div>
           <div className="gallery-hero-copy">
             <p>
-              รวมผลงานที่ได้รับอนุญาตและภาพจำลองเพื่อช่วยเลือกประเภทงาน
+              รวมผลงานที่ได้รับอนุญาตและภาพแนะนำเพื่อช่วยเลือกประเภทงาน
               แต่ละรายการแสดงวัสดุ รูปแบบ และมุมรายละเอียด
               และราคาเริ่มต้นจากฐานข้อมูลล่าสุด
             </p>
@@ -155,7 +158,7 @@ export default async function GalleryPage({
             aria-current={!selectedCategory ? "page" : undefined}
             href="/gallery"
           >
-            ทั้งหมด <span>{items.length}</span>
+            ภาพแนะนำทั้งหมด <span>{recommendedItems.length}</span>
           </Link>
           {categories.map((category) => (
             <Link
@@ -195,16 +198,22 @@ export default async function GalleryPage({
         </section>
       ) : (
         <>
-          {customerWork.length > 0 ? (
+          {concepts.length > 0 ? (
             <section
               className="portfolio-section shell"
-              aria-labelledby="real-work-heading"
+              aria-labelledby="concept-heading"
             >
-              <header className="portfolio-heading">
-                <p className="eyebrow">APPROVED CUSTOMER WORK</p>
-                <h2 id="real-work-heading">ผลงานที่ได้รับอนุญาต</h2>
+              <header className="portfolio-heading concept-heading">
+                <div>
+                  <p className="eyebrow">FORMAT &amp; BUDGET GUIDE</p>
+                  <h2 id="concept-heading">ตัวอย่างรูปแบบและงบประมาณ</h2>
+                </div>
+                <p>
+                  ภาพในส่วนนี้ใช้ประกอบเพื่อแนะนำรูปแบบเท่านั้น
+                  ไม่ใช่ผลงานของลูกค้าหรือสินค้าที่ผลิตจริง
+                </p>
               </header>
-              {customerWork.map((item, index) => (
+              {concepts.map((item, index) => (
                 <Project
                   key={item.id}
                   item={item}
@@ -219,22 +228,16 @@ export default async function GalleryPage({
             </section>
           ) : null}
 
-          {concepts.length > 0 ? (
+          {customerWork.length > 0 ? (
             <section
               className="portfolio-section shell"
-              aria-labelledby="concept-heading"
+              aria-labelledby="real-work-heading"
             >
-              <header className="portfolio-heading concept-heading">
-                <div>
-                  <p className="eyebrow">FORMAT &amp; BUDGET GUIDE</p>
-                  <h2 id="concept-heading">ตัวอย่างรูปแบบและงบประมาณ</h2>
-                </div>
-                <p>
-                  ภาพในส่วนนี้สร้างขึ้นเพื่ออธิบายแนวทางเท่านั้น
-                  ไม่ใช่ผลงานของลูกค้าหรือสินค้าที่ผลิตจริง
-                </p>
+              <header className="portfolio-heading">
+                <p className="eyebrow">APPROVED CUSTOMER WORK</p>
+                <h2 id="real-work-heading">ผลงานที่ได้รับอนุญาต</h2>
               </header>
-              {concepts.map((item, index) => (
+              {customerWork.map((item, index) => (
                 <Project
                   key={item.id}
                   item={item}

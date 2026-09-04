@@ -3,6 +3,15 @@ import { describe, expect, it } from "vitest";
 import CompanyPage from "./page";
 
 describe("CompanyPage closing paths", () => {
+  it("keeps implementation-status copy out of the public page", () => {
+    render(<CompanyPage />);
+
+    expect(screen.queryByText(/development/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/ภาพประกอบเพื่ออธิบายแนวทางการทำงาน/),
+    ).toBeInTheDocument();
+  });
+
   it("keeps the two customer paths distinct and actionable", () => {
     render(<CompanyPage />);
 

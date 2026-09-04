@@ -68,7 +68,7 @@ export default function CompanyPage() {
           fill
           priority
           sizes="100vw"
-          alt="ภาพจำลองทีมงานบรรจุภัณฑ์กำลังตรวจแบบคลี่ วัสดุ และตัวอย่างกล่องร่วมกัน"
+          alt="ภาพประกอบทีมงานบรรจุภัณฑ์กำลังตรวจแบบคลี่ วัสดุ และตัวอย่างกล่องร่วมกัน"
         />
         <div className="company-hero-shade" aria-hidden="true" />
         <div className="shell company-hero-copy">
@@ -99,8 +99,7 @@ export default function CompanyPage() {
           </div>
         </div>
         <p className="company-placeholder-note">
-          ภาพจำลองสำหรับ development — ต้องเปลี่ยนเป็นภาพทีมงานจริงก่อน
-          production
+          ภาพประกอบเพื่ออธิบายแนวทางการทำงาน ไม่ใช่ภาพทีมงานหรือผลงานลูกค้า
         </p>
       </section>
 
@@ -157,10 +156,10 @@ export default function CompanyPage() {
               src="/images/generated/solutions-workflow-v1.webp"
               fill
               sizes="(max-width: 900px) 100vw, 45vw"
-              alt="ภาพจำลองโต๊ะเตรียมแบบคลี่ ตัวอย่างวัสดุ และกล่องหลายระยะของการพัฒนางาน"
+              alt="ภาพประกอบโต๊ะเตรียมแบบคลี่ ตัวอย่างวัสดุ และกล่องหลายระยะของการพัฒนางาน"
             />
             <figcaption>
-              ภาพจำลองเพื่ออธิบายกระบวนการ ไม่ใช่ผลงานลูกค้า
+              ภาพประกอบเพื่ออธิบายกระบวนการ ไม่ใช่ผลงานลูกค้า
             </figcaption>
           </figure>
           <div>

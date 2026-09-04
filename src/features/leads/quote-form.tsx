@@ -253,6 +253,7 @@ export function QuoteForm({
           <Field
             label="ประเภทสินค้า"
             name="product_type"
+            placeholder="เช่น เครื่องสำอาง อาหารเสริม หรืออะไหล่"
             value={values.product_type}
             error={errors.product_type}
             onChange={update}
@@ -264,6 +265,7 @@ export function QuoteForm({
                 label="จำนวนโดยประมาณ"
                 name="quantity"
                 type="number"
+                placeholder="เช่น 1000"
                 value={values.quantity}
                 error={errors.quantity}
                 onChange={update}
@@ -272,6 +274,7 @@ export function QuoteForm({
               <Field
                 label="ขนาดที่ทราบ"
                 name="dimensions"
+                placeholder="เช่น กว้าง 10 × ยาว 15 × สูง 5 ซม."
                 value={values.dimensions}
                 onChange={update}
               />
@@ -281,12 +284,14 @@ export function QuoteForm({
             <Field
               label="จังหวัดที่จัดส่ง"
               name="delivery_province"
+              placeholder="เช่น สมุทรปราการ"
               value={values.delivery_province}
               onChange={update}
             />
             <Field
               label="กำหนดใช้งาน (ถ้ามี)"
               name="required_date"
+              type="date"
               value={values.required_date}
               onChange={update}
             />
@@ -296,6 +301,7 @@ export function QuoteForm({
               รายละเอียดและข้อจำกัด <b aria-hidden="true">*</b>
             </span>
             <textarea
+              placeholder="เช่น ต้องการกล่องใส่ขวด 30 มล. จัดส่งทางพัสดุ และต้องการคำแนะนำเรื่องวัสดุ"
               value={values.project_details}
               aria-invalid={Boolean(errors.project_details)}
               aria-describedby={
@@ -326,6 +332,7 @@ export function QuoteForm({
             <Field
               label="ชื่อผู้ติดต่อ"
               name="contact_name"
+              placeholder="เช่น คุณนันทา"
               value={values.contact_name}
               error={errors.contact_name}
               onChange={update}
@@ -334,6 +341,7 @@ export function QuoteForm({
             <Field
               label="บริษัทหรือแบรนด์ (ถ้ามี)"
               name="company"
+              placeholder="เช่น แบรนด์ตัวอย่าง"
               value={values.company}
               onChange={update}
             />
@@ -356,6 +364,7 @@ export function QuoteForm({
               label="เบอร์โทรศัพท์"
               name="phone"
               type="tel"
+              placeholder="เช่น 0812345678"
               value={values.phone}
               error={errors.phone}
               onChange={update}
@@ -366,6 +375,7 @@ export function QuoteForm({
             <Field
               label="LINE ID"
               name="line_id"
+              placeholder="เช่น ddboxprinting"
               value={values.line_id}
               error={errors.line_id}
               onChange={update}
@@ -377,6 +387,7 @@ export function QuoteForm({
               label="อีเมล"
               name="email"
               type="email"
+              placeholder="เช่น name@company.com"
               value={values.email}
               error={errors.email}
               onChange={update}
@@ -450,6 +461,7 @@ function Field({
   error,
   onChange,
   required = false,
+  placeholder,
 }: {
   label: string;
   name: keyof QuoteFormValues;
@@ -458,6 +470,7 @@ function Field({
   error?: string;
   onChange: (name: keyof QuoteFormValues, value: string) => void;
   required?: boolean;
+  placeholder?: string;
 }) {
   const errorId = `${name}-error`;
   return (
@@ -469,6 +482,7 @@ function Field({
         name={name}
         type={type}
         value={value}
+        placeholder={placeholder}
         required={required}
         min={type === "number" ? 1 : undefined}
         aria-invalid={Boolean(error)}

@@ -1,3 +1,5 @@
+// Reviewed Thai content retained as the one-time CMS migration source.
+// Public routes read only published API snapshots and do not import this module.
 export type SolutionSlug = "starter" | "growth" | "scale";
 
 export type SolutionGuide = {

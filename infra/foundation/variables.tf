@@ -27,3 +27,29 @@ variable "media_cors_origins" {
     error_message = "CORS origins must be exact HTTPS origins without a trailing slash."
   }
 }
+
+variable "notification_task_environments" {
+  description = "Environments where the durable lead-notification Cloud Tasks queue is provisioned."
+  type        = set(string)
+  default     = ["test"]
+
+  validation {
+    condition = alltrue([
+      for environment in var.notification_task_environments : contains(["test", "prod"], environment)
+    ])
+    error_message = "Notification task environments must be test and/or prod."
+  }
+}
+
+variable "structured_content_index_environments" {
+  description = "Environments where Products, Offers, FAQs, and Pages public-query indexes are provisioned."
+  type        = set(string)
+  default     = ["test"]
+
+  validation {
+    condition = alltrue([
+      for environment in var.structured_content_index_environments : contains(["test", "prod"], environment)
+    ])
+    error_message = "Structured content index environments must be test and/or prod."
+  }
+}

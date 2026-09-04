@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from ddbox_api.api import admin, integrations, media, public, system
+from ddbox_api.api import admin, integrations, internal, media, public, system
 from ddbox_api.auth import (
     FirebaseTokenVerifier,
     TestTokenVerifier,
@@ -38,6 +38,14 @@ from ddbox_api.services.media import CloudStorageMediaStore, LocalMediaStore, Me
 from ddbox_api.services.pricing import PricingService
 from ddbox_api.services.rate_limit import InMemoryRateLimiter
 from ddbox_api.services.revalidation import RevalidationGateway
+from ddbox_api.services.structured_content import StructuredContentService
+from ddbox_api.services.tasks import CloudTasksNotificationPublisher
+from ddbox_api.task_auth import (
+    GoogleOidcTaskTokenVerifier,
+    TaskTokenVerifier,
+    TestTaskTokenVerifier,
+    UnconfiguredTaskTokenVerifier,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,27 +94,59 @@ def _media_store(settings: Settings, media_root: Path | None) -> MediaStore:
 
 def _notification_gateway(
     settings: Settings,
-) -> LoggingNotificationGateway | PrimaryWithFallbackNotificationGateway:
-    if settings.notification_backend == "line_gmail":
-        return PrimaryWithFallbackNotificationGateway(
-            LinePushNotificationGateway(
-                settings.line_channel_access_token,
-                settings.line_notification_target_id,
-                environment=settings.environment,
-                lead_detail_base_url=settings.lead_detail_base_url,
-            ),
-            GmailFallbackNotificationGateway(
-                settings.notification_email,
-                settings.gmail_app_password,
-            ),
+) -> (
+    LoggingNotificationGateway
+    | LinePushNotificationGateway
+    | PrimaryWithFallbackNotificationGateway
+):
+    if settings.notification_backend in {"line", "line_gmail"}:
+        line_gateway = LinePushNotificationGateway(
+            settings.line_channel_access_token,
+            settings.line_notification_target_id,
+            environment=settings.environment,
+            lead_detail_base_url=settings.lead_detail_base_url,
         )
+        if settings.notification_backend == "line_gmail":
+            return PrimaryWithFallbackNotificationGateway(
+                line_gateway,
+                GmailFallbackNotificationGateway(
+                    settings.notification_email,
+                    settings.gmail_app_password,
+                ),
+            )
+        return line_gateway
     return LoggingNotificationGateway()
+
+
+def _task_publisher(settings: Settings) -> CloudTasksNotificationPublisher | None:
+    if settings.notification_delivery != "cloud_tasks":
+        return None
+    return CloudTasksNotificationPublisher(
+        project_id=str(settings.gcp_project_id),
+        location=settings.cloud_tasks_location,
+        queue_id=settings.cloud_tasks_queue,
+        target_url=settings.notification_task_target_url,
+        service_account_email=settings.notification_task_service_account,
+        audience=settings.notification_task_audience,
+    )
+
+
+def _task_token_verifier(settings: Settings) -> TaskTokenVerifier:
+    if settings.notification_delivery == "cloud_tasks":
+        return GoogleOidcTaskTokenVerifier(
+            audience=settings.notification_task_audience,
+            expected_email=settings.notification_task_service_account,
+        )
+    if settings.auth_mode == "test":
+        return TestTaskTokenVerifier()
+    return UnconfiguredTaskTokenVerifier()
 
 
 def create_app(
     settings: Settings | None = None,
     repository: ContentRepository | None = None,
     token_verifier: TokenVerifier | None = None,
+    task_token_verifier: TaskTokenVerifier | None = None,
     media_root: Path | None = None,
 ) -> FastAPI:
     configure_logging()
@@ -120,13 +160,17 @@ def create_app(
     app.state.settings = active_settings
     app.state.repository = repository or _repository(active_settings)
     app.state.token_verifier = token_verifier or _verifier(active_settings)
+    app.state.task_token_verifier = task_token_verifier or _task_token_verifier(active_settings)
     app.state.gallery_service = GalleryService(
         app.state.repository,
         active_settings.public_api_url,
     )
+    app.state.structured_content_service = StructuredContentService(app.state.repository)
     app.state.pricing_service = PricingService(app.state.repository)
     app.state.lead_service = LeadService(
-        app.state.repository, _notification_gateway(active_settings)
+        app.state.repository,
+        _notification_gateway(active_settings),
+        _task_publisher(active_settings),
     )
     app.state.line_webhook_service = LineWebhookService(
         app.state.repository, active_settings.line_channel_secret
@@ -208,6 +252,7 @@ def create_app(
     app.include_router(system.router)
     app.include_router(public.router)
     app.include_router(integrations.router)
+    app.include_router(internal.router)
     app.include_router(admin.router)
     app.include_router(media.router)
     return app

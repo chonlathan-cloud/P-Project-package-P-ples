@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import UTC, datetime
 
 import httpx
+import pytest
+from pydantic import ValidationError as PydanticValidationError
 
+from ddbox_api.config import Settings
 from ddbox_api.domain.models import LeadCreate, StoredLead
+from ddbox_api.main import _notification_gateway
 from ddbox_api.repositories.base import NotificationGateway
 from ddbox_api.services.leads import (
     LinePushNotificationGateway,
@@ -80,9 +85,7 @@ def test_line_push_targets_group_with_sales_first_flex_without_leaking_token() -
     message = body["messages"][0]
     assert message["type"] == "flex"
     assert message["contents"]["header"]["contents"][1]["text"] == "Lead ใหม่"
-    assert message["contents"]["footer"]["contents"][0]["action"]["label"] == (
-        "เปิดรายละเอียด Lead"
-    )
+    assert message["contents"]["footer"]["contents"][0]["action"]["label"] == ("เปิดรายละเอียด Lead")
     assert message["contents"]["footer"]["contents"][0]["action"]["uri"] == (
         "https://admin.example.com/leads/DD-TEST123"
     )
@@ -127,3 +130,27 @@ def test_gmail_is_not_used_when_line_succeeds() -> None:
 
     assert gateway.notify_lead(_lead()) == "line"
     assert fallback.calls == 0
+
+
+def test_line_only_backend_does_not_require_gmail_credentials() -> None:
+    settings = Settings(
+        environment="test",
+        auth_mode="test",
+        notification_backend="line",
+        line_channel_access_token=secrets.token_urlsafe(),
+        line_channel_secret=secrets.token_urlsafe(),
+        line_notification_target_id="C" + "a" * 32,
+    )
+
+    assert isinstance(_notification_gateway(settings), LinePushNotificationGateway)
+
+
+def test_line_only_backend_requires_complete_line_configuration() -> None:
+    with pytest.raises(PydanticValidationError, match="DDBOX_LINE_NOTIFICATION_TARGET_ID"):
+        Settings(
+            environment="test",
+            auth_mode="test",
+            notification_backend="line",
+            line_channel_access_token=secrets.token_urlsafe(),
+            line_channel_secret=secrets.token_urlsafe(),
+        )

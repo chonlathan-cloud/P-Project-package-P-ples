@@ -6,9 +6,10 @@ Thai-first marketing website, structured content CMS, and quote-lead pipeline fo
 
 - Web: Next.js App Router, React, and TypeScript (`src/`)
 - Content API: Python 3.13, FastAPI, and Pydantic (`services/content-api/`)
-- Target runtime: separate Cloud Run services
-- Target data: a dedicated named Firestore database and Cloud Storage bucket
+- Runtime: separate test Cloud Run services with the durable notification/CMS release deployed; production service definitions are prepared but not deployed
+- Data: dedicated test and production named Firestore databases and Cloud Storage buckets
 - Admin auth: Firebase Authentication with server-enforced `admin=true`
+- Notification delivery: durable Cloud Tasks retry with OIDC-authenticated internal delivery
 
 See `action-plan.md` for product scope, `DESIGN.md` for the canonical design system, `docs/decisions/0001-service-boundaries.md` for service-boundary rationale, and `docs/decisions/0002-shared-gcp-project-exception.md` for the approved GCP isolation model.
 
@@ -34,7 +35,7 @@ npm run dev
 
 Open `http://localhost:3000`. API docs are available at `http://localhost:8000/docs` outside production.
 
-Admin login remains unavailable until the Firebase client variables and `DDBOX_GCP_PROJECT_ID` are configured and the user has the custom claim `admin=true`. There is no development auth bypass outside `DDBOX_ENVIRONMENT=test`.
+Admin login remains unavailable until the Firebase client variables and `DDBOX_GCP_PROJECT_ID` are configured and the user has the custom claim `admin=true`. The CMS manages Gallery, Products, Offers, FAQs, and allowlisted Page sections through the authenticated API; it never writes directly to Firestore. There is no development auth bypass outside `DDBOX_ENVIRONMENT=test`.
 
 ### Containers
 
@@ -70,7 +71,7 @@ uv run pytest
 ```text
 src/app/                       Public/admin routes and web API bridge
 src/components/                Shared public UI
-src/features/                  Gallery and lead feature modules
+src/features/                  Admin, Gallery, and lead feature modules
 services/content-api/          Python API, repositories, services, and tests
 infra/                         Terraform bootstrap and shared-project foundation
 .agents/skills/ui-ux-review/   Frontend review quality gate
@@ -85,5 +86,5 @@ Package/                       Historical source design/assets; not production o
 - Direct Firestore and Firebase Storage client rules deny all access.
 - Do not publish existing customer-branded assets until permission is recorded.
 - Legal pages remain `noindex`, analytics/advertising are disabled, and unsupported business claims are omitted until the owners listed in `docs/decisions/launch-blockers.md` approve them.
-- Local media storage remains local/test only. Production uses private Cloud Storage, ten-minute signed direct uploads, stateless HMAC finalize tokens, decoded-image verification, metadata stripping through re-encoding, and immutable API-served variants.
-- The shared-project boundary is accepted, but no GCP resources have been provisioned. Cloud apply requires the explicit staged approvals documented in `infra/README.md`.
+- Local development can use filesystem media. Deployed test and production environments use private Cloud Storage, ten-minute signed direct uploads, stateless HMAC finalize tokens, decoded-image verification, metadata stripping through re-encoding, and immutable API-served variants.
+- The shared-project boundary is accepted. The isolated Terraform foundation, test-only Cloud Tasks queue/CMS indexes, and both public test Cloud Run services are provisioned and live-verified; production Cloud Run deployment remains blocked by the launch inputs in `docs/decisions/launch-blockers.md`.

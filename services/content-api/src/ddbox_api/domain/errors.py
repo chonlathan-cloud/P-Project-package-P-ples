@@ -21,3 +21,8 @@ class ForbiddenError(DomainError):
 class ValidationError(DomainError):
     code = "validation_error"
     status_code = 422
+
+
+class ServiceUnavailableError(DomainError):
+    code = "service_unavailable"
+    status_code = 503

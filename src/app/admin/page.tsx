@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminGalleryEditor } from "@/features/gallery/admin-gallery-editor";
+import { AdminWorkspace } from "@/features/admin/admin-workspace";
 
 export const metadata: Metadata = {
   title: "Content admin",
@@ -9,7 +9,7 @@ export default function AdminPage() {
   return (
     <section className="admin-page">
       <div className="shell">
-        <AdminGalleryEditor />
+        <AdminWorkspace />
       </div>
     </section>
   );

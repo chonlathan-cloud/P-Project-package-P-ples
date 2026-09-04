@@ -4,6 +4,7 @@ steps:
       - build
       - --pull
       - --build-arg=SITE_URL=${_SITE_URL}
+      - --build-arg=SITE_INDEXING_ENABLED=${_SITE_INDEXING_ENABLED}
       - --build-arg=CONTENT_API_URL=${_CONTENT_API_URL}
       - --build-arg=NEXT_PUBLIC_CONTENT_API_URL=${_CONTENT_API_URL}
       - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=${_FIREBASE_API_KEY}
@@ -54,6 +55,7 @@ options:
 substitutions:
   _IMAGE_TAG: required
   _SITE_URL: required
+  _SITE_INDEXING_ENABLED: "false"
   _CONTENT_API_URL: required
   _FIREBASE_API_KEY: required
   _FIREBASE_AUTH_DOMAIN: required

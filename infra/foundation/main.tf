@@ -74,6 +74,18 @@ locals {
       purpose     = "gmail-app-password"
     }
   }
+
+  notification_task_environments = {
+    for environment in var.notification_task_environments : environment => local.environments[environment]
+  }
+
+  structured_content_indexes = {
+    for pair in setproduct(var.structured_content_index_environments, ["products", "offers", "faqs", "pages"]) :
+    "${pair[0]}-${pair[1]}" => {
+      environment = pair[0]
+      collection  = pair[1]
+    }
+  }
 }
 
 resource "google_artifact_registry_repository" "ddbox" {
@@ -122,6 +134,43 @@ resource "google_service_account" "deployer" {
   deletion_policy = "ABANDON"
 }
 
+resource "google_service_account" "notification_task" {
+  for_each = local.notification_task_environments
+
+  project         = var.project_id
+  account_id      = "ddbox-tasks-${each.key}"
+  display_name    = "DD Box notification task ${upper(each.key)} identity"
+  description     = "OIDC identity used only by Cloud Tasks to invoke DD Box notification delivery."
+  deletion_policy = "ABANDON"
+}
+
+resource "google_cloud_tasks_queue" "lead_notifications" {
+  for_each = local.notification_task_environments
+
+  project         = var.project_id
+  location        = var.region
+  name            = "ddbox-lead-notifications-${each.key}"
+  desired_state   = "RUNNING"
+  deletion_policy = "PREVENT"
+
+  rate_limits {
+    max_dispatches_per_second = 1
+    max_concurrent_dispatches = 2
+  }
+
+  retry_config {
+    max_attempts       = 100
+    max_retry_duration = "604800s"
+    min_backoff        = "10s"
+    max_backoff        = "3600s"
+    max_doublings      = 8
+  }
+
+  stackdriver_logging_config {
+    sampling_ratio = 1
+  }
+}
+
 resource "google_firestore_database" "ddbox" {
   for_each = local.environments
 
@@ -146,6 +195,25 @@ resource "google_firestore_index" "gallery_published" {
   project     = var.project_id
   database    = google_firestore_database.ddbox[each.key].name
   collection  = "gallery_items"
+  query_scope = "COLLECTION"
+
+  fields {
+    field_path = "status"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "published_at"
+    order      = "DESCENDING"
+  }
+}
+
+resource "google_firestore_index" "structured_content_published" {
+  for_each = local.structured_content_indexes
+
+  project     = var.project_id
+  database    = google_firestore_database.ddbox[each.value.environment].name
+  collection  = each.value.collection
   query_scope = "COLLECTION"
 
   fields {
@@ -284,6 +352,16 @@ resource "google_project_iam_custom_role" "media_object_manager" {
   deletion_policy = "PREVENT"
 }
 
+resource "google_project_iam_custom_role" "firebase_auth_token_verifier" {
+  project         = var.project_id
+  role_id         = "ddboxFirebaseAuthTokenVerifier"
+  title           = "DD Box Firebase Auth Token Verifier"
+  description     = "Read the Firebase user state required to reject revoked or disabled admin sessions."
+  stage           = "GA"
+  permissions     = ["firebaseauth.users.get"]
+  deletion_policy = "PREVENT"
+}
+
 resource "google_project_iam_custom_role" "signed_url_creator" {
   project         = var.project_id
   role_id         = "ddboxSignedUrlCreator"
@@ -316,11 +394,37 @@ resource "google_project_iam_member" "api_firestore" {
   }
 }
 
+resource "google_project_iam_member" "api_firebase_auth_token_verifier" {
+  for_each = local.environments
+
+  project = var.project_id
+  role    = google_project_iam_custom_role.firebase_auth_token_verifier.name
+  member  = "serviceAccount:${google_service_account.api[each.key].email}"
+}
+
 resource "google_service_account_iam_member" "api_sign_blob" {
   for_each = local.environments
 
   service_account_id = google_service_account.api[each.key].name
   role               = google_project_iam_custom_role.signed_url_creator.name
+  member             = "serviceAccount:${google_service_account.api[each.key].email}"
+}
+
+resource "google_cloud_tasks_queue_iam_member" "api_notification_enqueuer" {
+  for_each = local.notification_task_environments
+
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_tasks_queue.lead_notifications[each.key].name
+  role     = "roles/cloudtasks.enqueuer"
+  member   = "serviceAccount:${google_service_account.api[each.key].email}"
+}
+
+resource "google_service_account_iam_member" "api_use_notification_task_identity" {
+  for_each = local.notification_task_environments
+
+  service_account_id = google_service_account.notification_task[each.key].name
+  role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.api[each.key].email}"
 }
 

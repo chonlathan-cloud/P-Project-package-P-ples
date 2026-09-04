@@ -11,7 +11,7 @@ describe("QuotePage", () => {
     render(await QuotePage({ searchParams: Promise.resolve({}) }));
 
     const visual = screen.getByRole("img", {
-      name: "ภาพจำลองการวัดกล่องและเตรียมข้อมูลโครงสร้างบรรจุภัณฑ์",
+      name: "ภาพประกอบการวัดกล่องและเตรียมข้อมูลโครงสร้างบรรจุภัณฑ์",
     });
     expect(visual.getAttribute("src")).toContain(
       "quote-brief-workspace-v1.webp",

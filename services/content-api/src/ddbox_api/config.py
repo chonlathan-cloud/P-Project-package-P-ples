@@ -32,13 +32,19 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     media_root: Path = Path(".local/media")
     max_upload_bytes: int = 10 * 1024 * 1024
-    notification_backend: Literal["logging", "line_gmail"] = "logging"
+    notification_backend: Literal["logging", "line", "line_gmail"] = "logging"
+    notification_delivery: Literal["background", "cloud_tasks"] = "background"
     line_channel_access_token: str = ""
     line_channel_secret: str = ""
     line_notification_target_id: str = ""
     lead_detail_base_url: str = ""
     gmail_app_password: str = ""
     notification_email: str = "paobansawang@gmail.com"
+    cloud_tasks_location: str = ""
+    cloud_tasks_queue: str = ""
+    notification_task_target_url: str = ""
+    notification_task_service_account: str = ""
+    notification_task_audience: str = ""
 
     @model_validator(mode="after")
     def validate_environment(self) -> Settings:
@@ -61,14 +67,19 @@ class Settings(BaseSettings):
             raise ValueError("test authentication is allowed only in the test environment")
         if self.media_token_key and len(self.media_token_key) < 32:
             raise ValueError("DDBOX_MEDIA_TOKEN_KEY must contain at least 32 characters")
-        if self.notification_backend == "line_gmail":
+        if self.notification_backend in {"line", "line_gmail"}:
             notification_required = {
                 "DDBOX_LINE_CHANNEL_ACCESS_TOKEN": self.line_channel_access_token,
                 "DDBOX_LINE_CHANNEL_SECRET": self.line_channel_secret,
                 "DDBOX_LINE_NOTIFICATION_TARGET_ID": self.line_notification_target_id,
-                "DDBOX_GMAIL_APP_PASSWORD": self.gmail_app_password,
-                "DDBOX_NOTIFICATION_EMAIL": self.notification_email,
             }
+            if self.notification_backend == "line_gmail":
+                notification_required.update(
+                    {
+                        "DDBOX_GMAIL_APP_PASSWORD": self.gmail_app_password,
+                        "DDBOX_NOTIFICATION_EMAIL": self.notification_email,
+                    }
+                )
             notification_missing = [
                 name for name, value in notification_required.items() if not value
             ]
@@ -76,6 +87,18 @@ class Settings(BaseSettings):
                 raise ValueError(
                     f"missing notification configuration: {', '.join(notification_missing)}"
                 )
+        if self.notification_delivery == "cloud_tasks":
+            task_required = {
+                "DDBOX_GCP_PROJECT_ID": self.gcp_project_id,
+                "DDBOX_CLOUD_TASKS_LOCATION": self.cloud_tasks_location,
+                "DDBOX_CLOUD_TASKS_QUEUE": self.cloud_tasks_queue,
+                "DDBOX_NOTIFICATION_TASK_TARGET_URL": self.notification_task_target_url,
+                "DDBOX_NOTIFICATION_TASK_SERVICE_ACCOUNT": (self.notification_task_service_account),
+                "DDBOX_NOTIFICATION_TASK_AUDIENCE": self.notification_task_audience,
+            }
+            task_missing = [name for name, value in task_required.items() if not value]
+            if task_missing:
+                raise ValueError(f"missing Cloud Tasks configuration: {', '.join(task_missing)}")
         return self
 
     @property

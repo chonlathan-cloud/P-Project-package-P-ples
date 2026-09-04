@@ -39,7 +39,7 @@ export function GalleryGrid({ items }: { items: GalleryItem[] }) {
           })()}
           <div className="gallery-caption">
             <span>
-              {item.evidence_type === "concept" ? "ภาพจำลอง · " : ""}
+              {item.evidence_type === "concept" ? "ภาพแนะนำ · " : ""}
               {item.category}
             </span>
             <h2>{item.title}</h2>

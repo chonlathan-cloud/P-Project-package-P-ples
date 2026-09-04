@@ -46,6 +46,9 @@ export const metadata: Metadata = {
   description:
     "ส่งสเปกงานหรือข้อมูลสินค้าเพื่อประเมินแนวทางกล่องบรรจุภัณฑ์สั่งผลิต",
   alternates: { canonical: "/" },
+  robots: serverEnv.SITE_INDEXING_ENABLED
+    ? undefined
+    : { index: false, follow: false },
 };
 
 export default function RootLayout({

@@ -41,7 +41,7 @@ export default async function QuotePage({
                 fill
                 priority
                 sizes="(max-width: 900px) calc(100vw - 40px), 430px"
-                alt="ภาพจำลองการวัดกล่องและเตรียมข้อมูลโครงสร้างบรรจุภัณฑ์"
+                alt="ภาพประกอบการวัดกล่องและเตรียมข้อมูลโครงสร้างบรรจุภัณฑ์"
               />
             </figure>
           </aside>

@@ -156,16 +156,18 @@ class CloudStorageMediaStore:
         credentials = self._get_credentials()
         if not credentials.valid or not credentials.token:
             credentials.refresh(Request())  # type: ignore[no-untyped-call]
-        upload_url = self._get_bucket().blob(
-            f"staging/{session_id}/original"
-        ).generate_signed_url(
-            expiration=expires_at,
-            method="PUT",
-            content_type=request.content_type,
-            version="v4",
-            credentials=credentials,
-            service_account_email=self._signing_service_account,
-            access_token=credentials.token,
+        upload_url = (
+            self._get_bucket()
+            .blob(f"staging/{session_id}/original")
+            .generate_signed_url(
+                expiration=expires_at,
+                method="PUT",
+                content_type=request.content_type,
+                version="v4",
+                credentials=credentials,
+                service_account_email=self._signing_service_account,
+                access_token=credentials.token,
+            )
         )
         return UploadSession(
             id=session_id,
@@ -198,12 +200,8 @@ class CloudStorageMediaStore:
         image, actual_type = _decode_image(raw, request.content_type)
         webp, fallback = _render_variants(image)
         prefix = f"ready/{session_id}"
-        bucket.blob(f"{prefix}/image.webp").upload_from_string(
-            webp, content_type="image/webp"
-        )
-        bucket.blob(f"{prefix}/image.jpg").upload_from_string(
-            fallback, content_type="image/jpeg"
-        )
+        bucket.blob(f"{prefix}/image.webp").upload_from_string(webp, content_type="image/webp")
+        bucket.blob(f"{prefix}/image.jpg").upload_from_string(fallback, content_type="image/jpeg")
         asset = _media_asset(
             asset_id=session_id,
             request=request,

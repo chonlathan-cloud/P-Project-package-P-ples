@@ -27,3 +27,14 @@ output "deployer_service_account" {
 output "build_bucket" {
   value = google_storage_bucket.build.name
 }
+
+output "notification_tasks" {
+  value = {
+    for environment, queue in google_cloud_tasks_queue.lead_notifications : environment => {
+      location                = queue.location
+      queue_name              = queue.name
+      task_service_account    = google_service_account.notification_task[environment].email
+      publisher_service_email = google_service_account.api[environment].email
+    }
+  }
+}

@@ -12,6 +12,8 @@ from ddbox_api.services.line_webhook import LineWebhookService
 from ddbox_api.services.media import MediaStore
 from ddbox_api.services.pricing import PricingService
 from ddbox_api.services.revalidation import RevalidationGateway
+from ddbox_api.services.structured_content import StructuredContentService
+from ddbox_api.task_auth import TaskTokenVerifier
 
 
 def get_repository(request: Request) -> ContentRepository:
@@ -44,3 +46,11 @@ def get_media_store(request: Request) -> MediaStore:
 
 def get_revalidation(request: Request) -> RevalidationGateway:
     return cast(RevalidationGateway, request.app.state.revalidation)
+
+
+def get_task_token_verifier(request: Request) -> TaskTokenVerifier:
+    return cast(TaskTokenVerifier, request.app.state.task_token_verifier)
+
+
+def get_structured_content_service(request: Request) -> StructuredContentService:
+    return cast(StructuredContentService, request.app.state.structured_content_service)

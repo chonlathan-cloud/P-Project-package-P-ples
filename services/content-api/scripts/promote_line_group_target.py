@@ -74,8 +74,7 @@ def main() -> int:
         }
     )
     print(
-        f"Promoted candidate {args.candidate_id[:12]}… into {secret_id}; "
-        "group ID was not printed."
+        f"Promoted candidate {args.candidate_id[:12]}… into {secret_id}; group ID was not printed."
     )
     return 0
 

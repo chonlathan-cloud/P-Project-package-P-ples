@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 from typing import Any, Literal
 
 from ddbox_api.domain.errors import ForbiddenError, ValidationError
@@ -11,6 +12,7 @@ from ddbox_api.domain.models import LineGroupCandidate, utc_now
 from ddbox_api.repositories.base import ContentRepository
 
 REGISTRATION_COMMAND = "#ddbox-register"
+logger = logging.getLogger(__name__)
 
 
 class LineWebhookService:
@@ -39,13 +41,39 @@ class LineWebhookService:
             raise ValidationError("invalid LINE webhook payload")
 
         destination = payload.get("destination")
+        event_types: set[str] = set()
+        source_types: set[str] = set()
+        registration_message_events = 0
         recorded = 0
         for event in payload["events"]:
+            if isinstance(event, dict):
+                event_types.add(str(event.get("type", "unknown")))
+                source = event.get("source")
+                if isinstance(source, dict):
+                    source_types.add(str(source.get("type", "unknown")))
+                message = event.get("message")
+                if (
+                    event.get("type") == "message"
+                    and isinstance(message, dict)
+                    and message.get("type") == "text"
+                    and str(message.get("text", "")).strip().lower() == REGISTRATION_COMMAND
+                ):
+                    registration_message_events += 1
             candidate = self._candidate_from_event(event, destination)
             if candidate is None:
                 continue
             self._repository.upsert_line_group_candidate(candidate)
             recorded += 1
+        logger.info(
+            "line_webhook_event_summary",
+            extra={
+                "event_count": len(payload["events"]),
+                "event_types": sorted(event_types),
+                "source_types": sorted(source_types),
+                "registration_message_events": registration_message_events,
+                "group_candidates_recorded": recorded,
+            },
+        )
         return recorded
 
     @staticmethod

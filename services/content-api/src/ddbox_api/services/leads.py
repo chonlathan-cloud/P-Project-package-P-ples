@@ -4,13 +4,19 @@ import hashlib
 import json
 import logging
 import smtplib
+from datetime import timedelta
 from email.message import EmailMessage
 from uuid import uuid4
 
 import httpx
 
-from ddbox_api.domain.models import LeadCreate, LeadReceipt, StoredLead, utc_now
-from ddbox_api.repositories.base import ContentRepository, NotificationGateway
+from ddbox_api.domain.errors import NotFoundError, ServiceUnavailableError
+from ddbox_api.domain.models import LeadCreate, LeadReceipt, NotificationStatus, StoredLead, utc_now
+from ddbox_api.repositories.base import (
+    ContentRepository,
+    NotificationGateway,
+    NotificationTaskPublisher,
+)
 from ddbox_api.services.line_flex import build_lead_flex_message, customer_path_label
 
 logger = logging.getLogger(__name__)
@@ -117,10 +123,18 @@ class PrimaryWithFallbackNotificationGateway:
 
 class LeadService:
     def __init__(
-        self, repository: ContentRepository, notification_gateway: NotificationGateway
+        self,
+        repository: ContentRepository,
+        notification_gateway: NotificationGateway,
+        task_publisher: NotificationTaskPublisher | None = None,
     ) -> None:
         self._repository = repository
         self._notifications = notification_gateway
+        self._task_publisher = task_publisher
+
+    @property
+    def uses_durable_tasks(self) -> bool:
+        return self._task_publisher is not None
 
     def create(self, payload: LeadCreate, idempotency_key: str) -> tuple[LeadReceipt, str]:
         canonical = json.dumps(
@@ -143,19 +157,58 @@ class LeadService:
         stored, duplicate = self._repository.create_lead_once(lead, key_hash, fingerprint)
         return LeadReceipt(reference=stored.reference, duplicate=duplicate), stored.id
 
-    def notify(self, lead_id: str) -> None:
-        # Notification delivery becomes a durable Cloud Tasks workflow before launch.
-        # The vertical slice keeps storage durable before this best-effort stub runs.
+    def enqueue_notification(self, lead_id: str) -> None:
+        if self._task_publisher is None:
+            raise RuntimeError("durable notification publisher is not configured")
+        lead = self._repository.get_lead(lead_id)
+        if lead is None:
+            raise NotFoundError("lead not found")
+        if lead.notification_status == NotificationStatus.SENT:
+            return
         try:
-            lead = self._repository.get_lead(lead_id)
-            if lead is None:
-                return
+            task_name = self._task_publisher.enqueue(lead_id)
+            logger.info(
+                "lead_notification_enqueued",
+                extra={"lead_reference": lead.reference, "task_name": task_name},
+            )
+        except Exception as error:
+            logger.exception(
+                "lead_notification_enqueue_failed",
+                extra={"lead_reference": lead.reference},
+            )
+            raise ServiceUnavailableError(
+                "lead was saved but notification scheduling failed; retry with the same key"
+            ) from error
+
+    def deliver_notification(self, lead_id: str) -> None:
+        claim_status, lead = self._repository.claim_notification(
+            lead_id, utc_now() + timedelta(minutes=2)
+        )
+        if claim_status == "missing":
+            logger.warning("lead_notification_missing")
+            return
+        if claim_status == "sent":
+            logger.info(
+                "lead_notification_already_sent",
+                extra={"lead_reference": lead.reference if lead else None},
+            )
+            return
+        if claim_status == "busy":
+            raise ServiceUnavailableError("lead notification is already being processed")
+        if lead is None:
+            raise RuntimeError("claimed notification did not return a lead")
+        try:
             channel = self._notifications.notify_lead(lead)
-            self._repository.mark_notification(lead_id, "sent")
+            self._repository.mark_notification_sent(lead_id, channel, utc_now())
             logger.info(
                 "lead_notification_sent",
                 extra={"lead_reference": lead.reference, "notification_channel": channel},
             )
-        except Exception:
-            logger.exception("lead_notification_failed", extra={"lead_id": lead_id})
-            self._repository.mark_notification(lead_id, "failed")
+        except Exception as error:
+            error_code = type(error).__name__[:80]
+            self._repository.mark_notification_failed(lead_id, error_code)
+            logger.exception(
+                "lead_notification_failed",
+                extra={"lead_reference": lead.reference, "error_code": error_code},
+            )
+            raise ServiceUnavailableError("lead notification delivery failed") from error

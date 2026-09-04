@@ -117,9 +117,7 @@ def _job_rows(payload: LeadCreate) -> list[dict[str, Any]]:
 
     if payload.dimensions:
         dimension_label = (
-            "ขนาดกล่อง"
-            if payload.customer_path == CustomerPath.HAS_SPECIFICATIONS
-            else "ขนาดสินค้า"
+            "ขนาดกล่อง" if payload.customer_path == CustomerPath.HAS_SPECIFICATIONS else "ขนาดสินค้า"
         )
         rows.append(_value_row(dimension_label, payload.dimensions))
     return rows

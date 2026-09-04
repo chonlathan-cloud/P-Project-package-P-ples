@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from typing import cast
+from datetime import datetime
+from typing import Literal, cast
 
 from google.api_core.exceptions import AlreadyExists
 from google.cloud import firestore
 
 from ddbox_api.domain.errors import ConflictError, NotFoundError
 from ddbox_api.domain.models import (
+    ContentDocument,
+    ContentKind,
     ContentStatus,
     GalleryItem,
     LineGroupCandidate,
+    NotificationStatus,
     PricingBenchmark,
     StoredLead,
+    StructuredContent,
     utc_now,
 )
 
@@ -33,6 +38,182 @@ class FirestoreContentRepository:
                 database=self._database,
             )
         return self._client_instance
+
+    @staticmethod
+    def _content_collection(kind: ContentKind) -> str:
+        return f"{kind.value}s"
+
+    @staticmethod
+    def _content_slug_collection(kind: ContentKind) -> str:
+        return f"{kind.value}_slugs"
+
+    def create_content(self, document: ContentDocument) -> ContentDocument:
+        item_ref = self._client.collection(self._content_collection(document.kind)).document(
+            document.id
+        )
+        slug_ref = self._client.collection(self._content_slug_collection(document.kind)).document(
+            document.content.slug
+        )
+        transaction = self._client.transaction()
+
+        @firestore.transactional
+        def create(transaction: firestore.Transaction) -> None:
+            if slug_ref.get(transaction=transaction).exists:
+                raise ConflictError(f"{document.kind.value} slug already exists")
+            transaction.create(slug_ref, {"item_id": document.id})
+            transaction.create(item_ref, document.model_dump(mode="json"))
+            self._append_audit(
+                transaction,
+                document.created_by,
+                "create",
+                document.kind.value,
+                document.id,
+            )
+
+        try:
+            create(transaction)
+        except AlreadyExists as error:
+            raise ConflictError(f"{document.kind.value} already exists") from error
+        return document
+
+    def list_content(self, kind: ContentKind) -> list[ContentDocument]:
+        query = (
+            self._client.collection(self._content_collection(kind))
+            .order_by("updated_at", direction=firestore.Query.DESCENDING)
+            .limit(200)
+        )
+        return [ContentDocument.model_validate(snapshot.to_dict()) for snapshot in query.stream()]
+
+    def get_content(self, kind: ContentKind, document_id: str) -> ContentDocument | None:
+        snapshot = (
+            self._client.collection(self._content_collection(kind)).document(document_id).get()
+        )
+        return ContentDocument.model_validate(snapshot.to_dict()) if snapshot.exists else None
+
+    def update_content(
+        self,
+        kind: ContentKind,
+        document_id: str,
+        expected_version: int,
+        content: StructuredContent,
+        actor_uid: str,
+    ) -> ContentDocument:
+        item_ref = self._client.collection(self._content_collection(kind)).document(document_id)
+        transaction = self._client.transaction()
+
+        @firestore.transactional
+        def update(transaction: firestore.Transaction) -> ContentDocument:
+            snapshot = item_ref.get(transaction=transaction)
+            if not snapshot.exists:
+                raise NotFoundError(f"{kind.value} not found")
+            current = ContentDocument.model_validate(snapshot.to_dict())
+            if current.version != expected_version:
+                raise ConflictError(f"{kind.value} changed; reload before saving")
+            if current.content.slug != content.slug:
+                if current.published_at is not None:
+                    raise ConflictError("slug cannot change after first publish")
+                old_slug_ref = self._client.collection(
+                    self._content_slug_collection(kind)
+                ).document(current.content.slug)
+                new_slug_ref = self._client.collection(
+                    self._content_slug_collection(kind)
+                ).document(content.slug)
+                if new_slug_ref.get(transaction=transaction).exists:
+                    raise ConflictError(f"{kind.value} slug already exists")
+                transaction.delete(old_slug_ref)
+                transaction.create(new_slug_ref, {"item_id": document_id})
+            updated = current.model_copy(
+                update={
+                    "content": content,
+                    "has_unpublished_changes": True,
+                    "version": current.version + 1,
+                    "updated_at": utc_now(),
+                    "updated_by": actor_uid,
+                }
+            )
+            transaction.set(item_ref, updated.model_dump(mode="json"))
+            self._append_audit(transaction, actor_uid, "update", kind.value, document_id)
+            return updated
+
+        return cast(ContentDocument, update(transaction))
+
+    def transition_content(
+        self,
+        kind: ContentKind,
+        document_id: str,
+        expected_version: int,
+        status: ContentStatus,
+        actor_uid: str,
+    ) -> ContentDocument:
+        item_ref = self._client.collection(self._content_collection(kind)).document(document_id)
+        transaction = self._client.transaction()
+
+        @firestore.transactional
+        def transition(transaction: firestore.Transaction) -> ContentDocument:
+            snapshot = item_ref.get(transaction=transaction)
+            if not snapshot.exists:
+                raise NotFoundError(f"{kind.value} not found")
+            current = ContentDocument.model_validate(snapshot.to_dict())
+            if current.version != expected_version:
+                raise ConflictError(f"{kind.value} changed; reload before changing status")
+            now = utc_now()
+            changes: dict[str, object] = {
+                "status": status,
+                "version": current.version + 1,
+                "updated_at": now,
+                "updated_by": actor_uid,
+            }
+            if status == ContentStatus.PUBLISHED:
+                changes.update(
+                    {
+                        "published_content": current.content.model_copy(deep=True),
+                        "published_at": now,
+                        "has_unpublished_changes": False,
+                    }
+                )
+            transitioned = current.model_copy(update=changes)
+            transaction.set(item_ref, transitioned.model_dump(mode="json"))
+            self._append_audit(
+                transaction,
+                actor_uid,
+                status.value,
+                kind.value,
+                document_id,
+            )
+            return transitioned
+
+        return cast(ContentDocument, transition(transaction))
+
+    def list_published_content(self, kind: ContentKind) -> list[ContentDocument]:
+        query = (
+            self._client.collection(self._content_collection(kind))
+            .where(filter=firestore.FieldFilter("status", "==", ContentStatus.PUBLISHED.value))
+            .order_by("published_at", direction=firestore.Query.DESCENDING)
+            .limit(200)
+        )
+        documents = [
+            ContentDocument.model_validate(snapshot.to_dict()) for snapshot in query.stream()
+        ]
+        return [
+            document.model_copy(update={"content": document.published_content}, deep=True)
+            for document in documents
+            if document.published_content is not None
+        ]
+
+    def get_published_content_by_slug(self, kind: ContentKind, slug: str) -> ContentDocument | None:
+        slug_snapshot = (
+            self._client.collection(self._content_slug_collection(kind)).document(slug).get()
+        )
+        if not slug_snapshot.exists:
+            return None
+        document = self.get_content(kind, str(slug_snapshot.get("item_id")))
+        if (
+            document is None
+            or document.status != ContentStatus.PUBLISHED
+            or document.published_content is None
+        ):
+            return None
+        return document.model_copy(update={"content": document.published_content}, deep=True)
 
     def create_gallery_item(self, item: GalleryItem) -> GalleryItem:
         slug_ref = self._client.collection("gallery_slugs").document(item.slug)
@@ -151,8 +332,64 @@ class FirestoreContentRepository:
         snapshot = self._client.collection("leads").document(lead_id).get()
         return StoredLead.model_validate(snapshot.to_dict()) if snapshot.exists else None
 
-    def mark_notification(self, lead_id: str, status: str) -> None:
-        self._client.collection("leads").document(lead_id).update({"notification_status": status})
+    def claim_notification(
+        self, lead_id: str, lease_until: datetime
+    ) -> tuple[Literal["claimed", "busy", "sent", "missing"], StoredLead | None]:
+        lead_ref = self._client.collection("leads").document(lead_id)
+        transaction = self._client.transaction()
+
+        @firestore.transactional
+        def claim(
+            transaction: firestore.Transaction,
+        ) -> tuple[Literal["claimed", "busy", "sent", "missing"], StoredLead | None]:
+            snapshot = lead_ref.get(transaction=transaction)
+            if not snapshot.exists:
+                return "missing", None
+            lead = StoredLead.model_validate(snapshot.to_dict())
+            if lead.notification_status == NotificationStatus.SENT:
+                return "sent", lead
+            now = utc_now()
+            if (
+                lead.notification_status == NotificationStatus.PROCESSING
+                and lead.notification_lease_until
+                and lead.notification_lease_until > now
+            ):
+                return "busy", lead
+            claimed = lead.model_copy(
+                update={
+                    "notification_status": NotificationStatus.PROCESSING,
+                    "notification_attempts": lead.notification_attempts + 1,
+                    "notification_lease_until": lease_until,
+                    "notification_last_error": None,
+                }
+            )
+            transaction.set(lead_ref, claimed.model_dump(mode="json"))
+            return "claimed", claimed
+
+        return cast(
+            tuple[Literal["claimed", "busy", "sent", "missing"], StoredLead | None],
+            claim(transaction),
+        )
+
+    def mark_notification_sent(self, lead_id: str, channel: str, sent_at: datetime) -> None:
+        self._client.collection("leads").document(lead_id).update(
+            {
+                "notification_status": NotificationStatus.SENT.value,
+                "notification_channel": channel,
+                "notification_sent_at": sent_at,
+                "notification_lease_until": None,
+                "notification_last_error": None,
+            }
+        )
+
+    def mark_notification_failed(self, lead_id: str, error_code: str) -> None:
+        self._client.collection("leads").document(lead_id).update(
+            {
+                "notification_status": NotificationStatus.FAILED.value,
+                "notification_lease_until": None,
+                "notification_last_error": error_code,
+            }
+        )
 
     def upsert_line_group_candidate(self, candidate: LineGroupCandidate) -> None:
         candidate_ref = self._client.collection("line_notification_targets").document(candidate.id)

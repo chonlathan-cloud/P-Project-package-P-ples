@@ -1,8 +1,9 @@
+# Non-secret DD Box origins are maintained in ddbox.auto.tfvars and loaded automatically.
+# Use this example only when intentionally overriding the checked-in foundation values.
 project_id = "the49-487609"
 region     = "asia-southeast1"
 
-# Fill only after the Cloud Run test/prod web origins or canonical domains exist.
 media_cors_origins = {
-  test = []
-  prod = []
+  test = ["https://ddbox-web-test-439060579730.asia-southeast1.run.app"]
+  prod = ["https://ddbox-web-prod-439060579730.asia-southeast1.run.app"]
 }

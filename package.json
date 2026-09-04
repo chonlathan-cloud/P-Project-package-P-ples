@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{json,ts,mjs}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.mjs\" \"*.{json,ts,mjs}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

@@ -38,3 +38,24 @@ output "notification_tasks" {
     }
   }
 }
+
+output "production_web_edge" {
+  description = "Non-secret values required to complete and verify the Production domain cutover."
+  value = {
+    canonical_domain = var.production_canonical_domain
+    apex_domain      = var.production_domain
+    ipv4_address     = google_compute_global_address.web_prod.address
+    dns_authorizations = [
+      {
+        name = google_certificate_manager_dns_authorization.web_prod.dns_resource_record[0].name
+        type = google_certificate_manager_dns_authorization.web_prod.dns_resource_record[0].type
+        data = google_certificate_manager_dns_authorization.web_prod.dns_resource_record[0].data
+      },
+      {
+        name = google_certificate_manager_dns_authorization.web_prod_canonical.dns_resource_record[0].name
+        type = google_certificate_manager_dns_authorization.web_prod_canonical.dns_resource_record[0].type
+        data = google_certificate_manager_dns_authorization.web_prod_canonical.dns_resource_record[0].data
+      },
+    ]
+  }
+}

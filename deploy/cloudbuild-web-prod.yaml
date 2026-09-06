@@ -26,4 +26,4 @@ options:
   logging: GCS_ONLY
   machineType: E2_HIGHCPU_8
 substitutions:
-  _SITE_INDEXING_ENABLED: "false"
+  _SITE_INDEXING_ENABLED: "true"

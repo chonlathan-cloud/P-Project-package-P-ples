@@ -249,14 +249,15 @@ export default async function HomePage() {
               <p className="eyebrow">SELECTED CLIENTS</p>
               <h2 id="client-proof-heading">แบรนด์ที่เคยร่วมงานกับ DD Box</h2>
               <p>
-                ตัวอย่างลูกค้าที่ให้เราได้ร่วมผลิตงานบรรจุภัณฑ์
-                และอนุญาตให้เผยแพร่ชื่อและโลโก้บนเว็บไซต์
+                ตัวอย่างแบรนด์ที่ร่วมผลิตงานบรรจุภัณฑ์
+                และอนุญาตให้เผยแพร่ชื่อและโลโก้
               </p>
             </div>
             <ul className="client-logo-grid">
               {clientBrands.map((brand) => (
                 <li key={brand.id}>
                   <Image
+                    className={`client-logo client-logo--${brand.logoPresentation}`}
                     src={brand.logoSrc}
                     width={brand.logoWidth}
                     height={brand.logoHeight}

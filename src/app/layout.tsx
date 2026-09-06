@@ -46,6 +46,15 @@ export const metadata: Metadata = {
   description:
     "ส่งสเปกงานหรือข้อมูลสินค้าเพื่อประเมินแนวทางกล่องบรรจุภัณฑ์สั่งผลิต",
   alternates: { canonical: "/" },
+  icons: {
+    icon: [
+      { url: "/images/New-logo.png", type: "image/png", sizes: "1254x1254" },
+    ],
+    shortcut: [{ url: "/images/New-logo.png", type: "image/png" }],
+    apple: [
+      { url: "/images/New-logo.png", type: "image/png", sizes: "1254x1254" },
+    ],
+  },
   robots: serverEnv.SITE_INDEXING_ENABLED
     ? undefined
     : { index: false, follow: false },

@@ -1,6 +1,6 @@
 # DD Box Printing Website — Action Plan
 
-Status: implementation in progress; Test is deployed and live-verified. The Production foundation, CMS/Gallery content, and LINE-only Content API are deployed behind the Cloud Run URL; the Production Web, canonical-domain cutover, Gmail fallback, and remaining launch inputs are tracked in `docs/decisions/launch-blockers.md`.
+Status: implementation in progress; Test is deployed and the Production canonical domain was cut over to the Google HTTPS load balancer on 2026-09-05. `https://www.ddboxprinting.com` is live on Web revision `ddbox-web-prod-00004-yof` with indexing enabled, the managed certificate active, apex/HTTP redirects verified, and custom-domain API/Media CORS working. Gmail fallback, post-cutover SEO monitoring, and remaining business launch inputs are tracked in `docs/decisions/launch-blockers.md`.
 Target: conversion-focused, SEO-ready DD Box Printing website with a structured admin CMS
 GCP discovery project: `the49-487609`
 

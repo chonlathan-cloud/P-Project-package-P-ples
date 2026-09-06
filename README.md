@@ -6,7 +6,7 @@ Thai-first marketing website, structured content CMS, and quote-lead pipeline fo
 
 - Web: Next.js App Router, React, and TypeScript (`src/`)
 - Content API: Python 3.13, FastAPI, and Pydantic (`services/content-api/`)
-- Runtime: separate test Cloud Run services with the durable notification/CMS release deployed; production service definitions are prepared but not deployed
+- Runtime: separate Test and Production Cloud Run services; Production remains on its globally `noindex` Cloud Run URL until DNS cutover
 - Data: dedicated test and production named Firestore databases and Cloud Storage buckets
 - Admin auth: Firebase Authentication with server-enforced `admin=true`
 - Notification delivery: durable Cloud Tasks retry with OIDC-authenticated internal delivery

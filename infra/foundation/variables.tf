@@ -10,6 +10,34 @@ variable "region" {
   default     = "asia-southeast1"
 }
 
+variable "production_domain" {
+  description = "Apex domain for DD Box Production."
+  type        = string
+  default     = "ddboxprinting.com"
+
+  validation {
+    condition     = var.production_domain == trimsuffix(lower(var.production_domain), ".") && !startswith(var.production_domain, "www.")
+    error_message = "Production domain must be a lowercase apex hostname without a trailing dot."
+  }
+}
+
+variable "production_canonical_domain" {
+  description = "Canonical hostname served by DD Box Production."
+  type        = string
+  default     = "www.ddboxprinting.com"
+
+  validation {
+    condition     = var.production_canonical_domain == trimsuffix(lower(var.production_canonical_domain), ".")
+    error_message = "Production canonical domain must be a lowercase hostname without a trailing dot."
+  }
+}
+
+variable "production_web_service_name" {
+  description = "Existing Cloud Run service used by the Production serverless NEG."
+  type        = string
+  default     = "ddbox-web-prod"
+}
+
 variable "media_cors_origins" {
   description = "Exact HTTPS web origins allowed to PUT through signed media upload URLs."
   type        = map(list(string))

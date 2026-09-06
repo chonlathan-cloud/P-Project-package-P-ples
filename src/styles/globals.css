@@ -599,14 +599,15 @@ h3 {
   font-size: 17px;
 }
 .client-proof-section {
+  padding-block: 64px;
   border-top: 1px solid var(--color-text);
   background: var(--color-surface-subtle);
 }
 .client-proof-layout {
   display: grid;
   grid-template-columns: 0.72fr 1.28fr;
-  gap: 72px;
-  align-items: start;
+  gap: 48px;
+  align-items: center;
 }
 .client-proof-heading > p:not(.eyebrow) {
   max-width: 42ch;
@@ -624,18 +625,24 @@ h3 {
   list-style: none;
 }
 .client-logo-grid li {
-  min-height: 156px;
+  min-height: 140px;
   display: grid;
   place-items: center;
   border-right: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
-  padding: 20px;
+  padding: 16px;
 }
 .client-logo-grid img {
-  width: min(160px, 85%);
-  height: 72px;
+  width: min(184px, 88%);
+  height: 80px;
   object-fit: contain;
+}
+.client-logo--large {
+  transform: scale(1.2);
+}
+.client-logo--xlarge {
+  transform: scale(1.45);
 }
 .client-logo-grid span {
   position: absolute;
@@ -3048,12 +3055,12 @@ h3 {
     gap: 32px;
   }
   .client-logo-grid li {
-    min-height: 124px;
-    padding: 16px;
+    min-height: 120px;
+    padding: 12px;
   }
   .client-logo-grid img {
-    width: min(132px, 86%);
-    height: 60px;
+    width: min(136px, 88%);
+    height: 64px;
   }
   .split-heading {
     align-items: start;

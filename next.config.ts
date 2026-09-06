@@ -23,9 +23,25 @@ const contentSecurityPolicy = [
   `connect-src 'self' ${apiOrigin} https://*.googleapis.com https://securetoken.googleapis.com`,
 ].join("; ");
 
+export const legacyRedirects = [
+  {
+    source: "/product",
+    destination: "/products",
+    permanent: true,
+  },
+  {
+    source: "/ddboxprinting",
+    destination: "/company",
+    permanent: true,
+  },
+] as const;
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  async redirects() {
+    return legacyRedirects.map((redirect) => ({ ...redirect }));
+  },
   async headers() {
     return [
       {

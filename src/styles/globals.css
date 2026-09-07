@@ -2381,16 +2381,81 @@ h3 {
   display: grid;
   place-items: center;
   padding-block: 96px;
+}
+.confirmation-shell {
+  max-width: 980px;
+}
+.confirmation-heading {
+  max-width: 760px;
+  margin-inline: auto;
   text-align: center;
 }
-.confirmation .button {
-  margin-top: 24px;
+.confirmation-heading > p:last-child {
+  max-width: 58ch;
+  margin: 28px auto 0;
+  color: var(--color-text-muted);
+}
+.confirmation-reference-group {
+  margin-top: 32px;
+  text-align: center;
 }
 .reference {
-  display: inline-block;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+  justify-content: center;
   border: 2px solid var(--color-text);
-  padding: 10px 16px;
+  padding: 12px;
   background: var(--color-brand-primary);
+}
+.reference > span {
+  font-size: 14px;
+  font-weight: 800;
+}
+.reference > strong {
+  font-size: clamp(1.1rem, 2.5vw, 1.45rem);
+  letter-spacing: 0.04em;
+}
+.reference-copy {
+  min-height: 44px;
+  padding: 7px 14px;
+  background: #fff;
+}
+.confirmation-copy-status {
+  min-height: 24px;
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.confirmation-next-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 56px;
+  align-items: center;
+  border-block: 1px solid var(--color-text);
+  margin-top: 40px;
+  padding: 40px;
+  background: var(--color-surface-subtle);
+}
+.confirmation-next-copy h2 {
+  max-width: 18ch;
+  margin-bottom: 18px;
+}
+.confirmation-next-copy > p:not(.eyebrow) {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: center;
+  margin-top: 24px;
+}
+.confirmation-qr {
+  padding-left: 32px;
 }
 
 .prose h1 {
@@ -2553,6 +2618,10 @@ h3 {
 @media (max-width: 900px) {
   .shell {
     width: min(calc(100% - 40px), 1280px);
+  }
+  .confirmation-next-step {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
   .storefront-hero {
     min-height: 650px;
@@ -2765,6 +2834,38 @@ h3 {
   }
   .shell {
     width: min(calc(100% - 32px), 1280px);
+  }
+  .confirmation {
+    padding-block: 64px;
+  }
+  .confirmation-heading > p:last-child {
+    margin-top: 20px;
+  }
+  .confirmation-reference-group {
+    margin-top: 24px;
+  }
+  .reference {
+    width: 100%;
+    display: grid;
+    gap: 8px;
+  }
+  .reference-copy {
+    width: 100%;
+  }
+  .confirmation-next-step {
+    margin-top: 28px;
+    padding: 32px 20px;
+  }
+  .confirmation-next-copy h2 {
+    max-width: none;
+  }
+  .confirmation-actions {
+    display: grid;
+    gap: 12px;
+  }
+  .confirmation-actions .button,
+  .confirmation-actions .text-link {
+    width: 100%;
   }
   .header-inner {
     min-height: 68px;

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { ThankYouActions } from "@/features/leads/thank-you-actions";
 
 export const metadata: Metadata = {
   title: "รับข้อมูลแล้ว",
@@ -11,24 +11,21 @@ export default async function ThankYouPage({
 }: {
   searchParams: Promise<{ reference?: string }>;
 }) {
-  const reference = (await searchParams).reference;
+  const candidate = (await searchParams).reference?.trim();
+  const reference =
+    candidate && /^DD-[A-F0-9]{10}$/.test(candidate) ? candidate : undefined;
   return (
     <section className="confirmation">
-      <div className="shell narrow">
-        <p className="eyebrow">BRIEF RECEIVED</p>
-        <h1>ระบบรับข้อมูลแล้ว</h1>
-        {reference ? (
-          <p className="reference">
-            รหัสอ้างอิง <strong>{reference}</strong>
+      <div className="shell confirmation-shell">
+        <div className="confirmation-heading">
+          <p className="eyebrow">BRIEF RECEIVED</p>
+          <h1>ระบบรับข้อมูลแล้ว</h1>
+          <p>
+            ทีมงานได้รับรายละเอียดเรียบร้อยแล้ว ไม่จำเป็นต้องส่งซ้ำ
+            และจะติดต่อผ่านช่องทางที่คุณเลือก
           </p>
-        ) : null}
-        <p>
-          ทีมงานจะตรวจสอบรายละเอียดและติดต่อผ่านช่องทางที่คุณเลือก
-          หากต้องการส่งข้อมูลเพิ่ม โปรดเก็บรหัสอ้างอิงนี้ไว้
-        </p>
-        <Link className="button" href="/">
-          กลับหน้าหลัก
-        </Link>
+        </div>
+        <ThankYouActions reference={reference} />
       </div>
     </section>
   );

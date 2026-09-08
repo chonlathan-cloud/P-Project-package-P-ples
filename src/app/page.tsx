@@ -4,7 +4,7 @@ import Link from "next/link";
 import { GalleryGrid } from "@/components/gallery-grid";
 import { getApprovedClientBrands } from "@/content/client-brands";
 import { byDisplayOrder, pageSection } from "@/features/content/types";
-import type { GalleryItem } from "@/features/gallery/types";
+import { selectHomeGalleryItems } from "@/features/gallery/home-selection";
 import {
   getPublishedGallery,
   getPublishedOffers,
@@ -70,8 +70,10 @@ export default async function HomePage() {
     offersResult.status === "fulfilled"
       ? offersResult.value.toSorted(byDisplayOrder)
       : [];
-  const gallery: GalleryItem[] =
-    galleryResult.status === "fulfilled" ? galleryResult.value.slice(0, 4) : [];
+  const gallery =
+    galleryResult.status === "fulfilled"
+      ? selectHomeGalleryItems(galleryResult.value)
+      : [];
 
   return (
     <>

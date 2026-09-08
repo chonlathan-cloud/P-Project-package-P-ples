@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { quoteFormSchema, toLeadPayload, type QuoteFormValues } from "./schema";
 
@@ -403,17 +404,27 @@ export function QuoteForm({
               onChange={(event) => update("website", event.target.value)}
             />
           </label>
-          <label className="consent">
-            <input
-              type="checkbox"
-              checked={values.consent}
-              onChange={(event) => update("consent", event.target.checked)}
-            />
-            <span>
-              ยินยอมให้ใช้ข้อมูลนี้เพื่อตรวจสอบงานและติดต่อกลับ{" "}
-              <b aria-hidden="true">*</b>
-            </span>
-          </label>
+          <div className="consent-group">
+            <label className="consent">
+              <input
+                type="checkbox"
+                checked={values.consent}
+                onChange={(event) => update("consent", event.target.checked)}
+              />
+              <span>
+                ยินยอมให้ใช้ข้อมูลนี้เพื่อประเมินงานและติดต่อกลับ{" "}
+                <b aria-hidden="true">*</b>
+              </span>
+            </label>
+            <Link
+              className="consent-policy-link"
+              href="/privacy"
+              target="_blank"
+            >
+              อ่านประกาศความเป็นส่วนตัว
+              <span className="sr-only"> (เปิดในแท็บใหม่)</span>
+            </Link>
+          </div>
           {errors.consent ? (
             <small className="field-error">{errors.consent}</small>
           ) : null}

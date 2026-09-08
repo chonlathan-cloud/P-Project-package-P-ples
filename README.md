@@ -85,6 +85,6 @@ Package/                       Historical source design/assets; not production o
 - Project IDs, database names, buckets, domains, and API URLs are environment configuration.
 - Direct Firestore and Firebase Storage client rules deny all access.
 - Do not publish existing customer-branded assets until permission is recorded.
-- Legal pages remain `noindex`, analytics/advertising are disabled, and unsupported business claims are omitted until the owners listed in `docs/decisions/launch-blockers.md` approve them.
+- The Privacy Notice is approved effective 2026-09-08 and indexable in Production. Terms remains `noindex`, analytics/advertising tags remain disabled, and unsupported business claims are omitted until the owners listed in `docs/decisions/launch-blockers.md` approve them.
 - Local development can use filesystem media. Deployed test and production environments use private Cloud Storage, ten-minute signed direct uploads, stateless HMAC finalize tokens, decoded-image verification, metadata stripping through re-encoding, and immutable API-served variants.
-- The shared-project boundary is accepted. The isolated Terraform foundation, test-only Cloud Tasks queue/CMS indexes, and both public test Cloud Run services are provisioned and live-verified; production Cloud Run deployment remains blocked by the launch inputs in `docs/decisions/launch-blockers.md`.
+- The shared-project boundary is accepted. The isolated Terraform foundation and public test/production Cloud Run services are provisioned and live-verified; remaining post-cutover inputs are tracked in `docs/decisions/launch-blockers.md`.

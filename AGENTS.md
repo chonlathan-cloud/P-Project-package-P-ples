@@ -10,4 +10,3 @@
 - Treat Thai as the primary locale. Do not add English routes until complete reviewed translations exist.
 - Do not publish unverified claims, prices, lead times, customer branding, testimonials, addresses, or contact details.
 - Add or update focused tests for meaningful behavior changes and report only commands actually run.
-

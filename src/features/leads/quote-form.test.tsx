@@ -69,4 +69,25 @@ describe("QuoteForm", () => {
     ).toBeInTheDocument();
     expect(screen.queryByLabelText(/จำนวนโดยประมาณ/)).not.toBeInTheDocument();
   });
+
+  it("links consent to the published privacy notice before submission", () => {
+    render(<QuoteForm initialPath="needs_guidance" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "ไปกรอกรายละเอียดงาน" }),
+    );
+    fireEvent.change(screen.getByLabelText(/ประเภทสินค้า/), {
+      target: { value: "กล่องออฟเซ็ท" },
+    });
+    fireEvent.change(screen.getByLabelText(/รายละเอียดและข้อจำกัด/), {
+      target: { value: "ต้องการกล่องสำหรับสินค้าใหม่" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "ไปเลือกช่องทางติดต่อ" }),
+    );
+
+    expect(
+      screen.getByRole("link", { name: /อ่านประกาศความเป็นส่วนตัว/ }),
+    ).toHaveAttribute("href", "/privacy");
+  });
 });

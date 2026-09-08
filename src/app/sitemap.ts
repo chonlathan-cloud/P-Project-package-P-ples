@@ -10,6 +10,7 @@ const baseRoutes = [
   "/company",
   "/quote",
   "/contact",
+  "/privacy",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

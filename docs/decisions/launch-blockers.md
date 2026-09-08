@@ -7,7 +7,7 @@ Resolved: the owner accepted the documented shared-project exception for `the49-
 | Decision/input                                                                         | Required owner            | Blocks                                          |
 | -------------------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------- |
 | Approved NAP, LINE OA, email, hours, and map                                           | Business owner            | Contact page and LocalBusiness JSON-LD          |
-| Approved privacy notice, consent behavior, retention, and terms                        | Business/legal owner      | Public legal pages, analytics, production leads |
+| Approved website terms                                                                 | Business/legal owner      | Public Terms page                               |
 | Approved claims, MOQ guidance, lead times, delivery coverage, and factory capabilities | Operations/business owner | Trust, offers, product copy, FAQs               |
 | Publishing rights for each logo, testimonial, case study, and branded image            | Business owner            | Gallery/content migration                       |
 | Authentic high-resolution factory, machinery, team, and QC media                       | Business owner            | Proof sections and launch visual QA             |
@@ -19,3 +19,7 @@ Gmail fallback is deferred pending owner approval of an App Password. Nine owner
 assets are published, including the owner-confirmed Fulfill and Hua Hed replacements. Production
 indexing is enabled; analytics/ads remain disabled, the legacy Wix URL inventory is incomplete, and
 the Wix site should remain available as the rollback origin for at least seven days after cutover.
+
+The business owner approved the website Privacy Notice, consent behavior, and a 24-month retention
+period for non-customer quote requests on 2026-09-08. The notice is effective from that date;
+analytics and advertising tags remain disabled.

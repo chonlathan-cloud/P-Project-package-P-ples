@@ -1,6 +1,6 @@
 # DD Box Printing Website — Action Plan
 
-Status: implementation in progress; Test is deployed and the Production canonical domain was cut over to the Google HTTPS load balancer on 2026-09-05. `https://www.ddboxprinting.com` is live on Web revision `ddbox-web-prod-00004-yof` with indexing enabled, the managed certificate active, apex/HTTP redirects verified, and custom-domain API/Media CORS working. Gmail fallback, post-cutover SEO monitoring, and remaining business launch inputs are tracked in `docs/decisions/launch-blockers.md`.
+Status: implementation in progress; Test is deployed and the Production canonical domain was cut over to the Google HTTPS load balancer on 2026-09-05. `https://www.ddboxprinting.com` is live on Web revision `ddbox-web-prod-00012-per` with indexing enabled, Basic Consent Mode for GTM container `GTM-MWW3HWHR`, the managed certificate active, apex/HTTP redirects verified, and custom-domain API/Media CORS working. Gmail fallback, post-cutover SEO monitoring, and remaining business launch inputs are tracked in `docs/decisions/launch-blockers.md`.
 Target: conversion-focused, SEO-ready DD Box Printing website with a structured admin CMS
 GCP discovery project: `the49-487609`
 
@@ -449,6 +449,13 @@ Conditional fields must follow the chosen customer path. Do not show 15–20 fie
 The thank-you state must explain business-hours response expectations and how to send extra material through LINE OA. Do not promise response times that operations cannot meet.
 
 ### Analytics events
+
+Decision (2026-09-08): Production uses Google Tag Manager container
+`GTM-MWW3HWHR` with Basic Consent Mode. The web application does not load the
+container before an explicit opt-in, keeps rejection functionally equivalent
+to the necessary-only experience, and exposes a footer control for changing
+the saved choice. Application-owned `dataLayer` events use a typed allowlist
+and exclude lead contact data, job details, artwork, and attachment URLs.
 
 Define and document events before implementation:
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { trackAnalyticsEvent } from "@/features/analytics/consent";
 import { quoteFormSchema, toLeadPayload, type QuoteFormValues } from "./schema";
 
 type Path = QuoteFormValues["customer_path"];
@@ -70,6 +71,11 @@ export function QuoteForm({
 
   function advance() {
     if (step === 1) {
+      trackAnalyticsEvent({
+        event: "quote_step_complete",
+        step_number: 1,
+        customer_path: values.customer_path,
+      });
       setStep(2);
       return;
     }
@@ -84,6 +90,11 @@ export function QuoteForm({
       queueMicrotask(() => errorSummary.current?.focus());
       return;
     }
+    trackAnalyticsEvent({
+      event: "quote_step_complete",
+      step_number: 2,
+      customer_path: values.customer_path,
+    });
     setStep(3);
   }
 
@@ -117,6 +128,10 @@ export function QuoteForm({
         throw new Error(problem?.request_id ?? "unknown");
       }
       const receipt = (await response.json()) as { reference: string };
+      trackAnalyticsEvent({
+        event: "quote_submit",
+        customer_path: values.customer_path,
+      });
       router.push(
         `/thank-you?reference=${encodeURIComponent(receipt.reference)}`,
       );
@@ -197,7 +212,13 @@ export function QuoteForm({
                   type="radio"
                   name="customer_path"
                   checked={values.customer_path === "has_specifications"}
-                  onChange={() => update("customer_path", "has_specifications")}
+                  onChange={() => {
+                    update("customer_path", "has_specifications");
+                    trackAnalyticsEvent({
+                      event: "customer_path_selected",
+                      customer_path: "has_specifications",
+                    });
+                  }}
                 />
                 <span className="choice-copy">
                   <strong>มีขนาดหรือกล่องเดิมแล้ว</strong>
@@ -221,7 +242,13 @@ export function QuoteForm({
                   type="radio"
                   name="customer_path"
                   checked={values.customer_path === "needs_guidance"}
-                  onChange={() => update("customer_path", "needs_guidance")}
+                  onChange={() => {
+                    update("customer_path", "needs_guidance");
+                    trackAnalyticsEvent({
+                      event: "customer_path_selected",
+                      customer_path: "needs_guidance",
+                    });
+                  }}
                 />
                 <span className="choice-copy">
                   <strong>มีสินค้าแต่ยังไม่มีแบบ</strong>

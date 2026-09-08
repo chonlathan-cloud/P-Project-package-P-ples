@@ -120,6 +120,8 @@ smoke_web() {
   local DDBOX_TARGET_ENVIRONMENT="$2"
   local DDBOX_ROBOTS
   local DDBOX_HOME
+  local DDBOX_HEADERS
+  local DDBOX_PRIVACY
 
   curl --silent --show-error --fail --max-time 30 "$DDBOX_BASE_URL/" >/dev/null || return 1
   curl --silent --show-error --fail --max-time 30 "$DDBOX_BASE_URL/admin" >/dev/null || return 1
@@ -130,6 +132,10 @@ smoke_web() {
     grep -Fq "Sitemap: https://www.ddboxprinting.com/sitemap.xml" <<<"$DDBOX_ROBOTS" || return 1
     DDBOX_HOME="$(curl --silent --show-error --fail --max-time 30 "$DDBOX_BASE_URL/")" || return 1
     grep -Fq "https://www.ddboxprinting.com" <<<"$DDBOX_HOME" || return 1
+    DDBOX_HEADERS="$(curl --silent --show-error --fail --head --max-time 30 "$DDBOX_BASE_URL/")" || return 1
+    grep -Fiq "www.googletagmanager.com" <<<"$DDBOX_HEADERS" || return 1
+    DDBOX_PRIVACY="$(curl --silent --show-error --fail --max-time 30 "$DDBOX_BASE_URL/privacy")" || return 1
+    grep -Fq "Basic Consent Mode" <<<"$DDBOX_PRIVACY" || return 1
   else
     grep -Fq "Disallow: /" <<<"$DDBOX_ROBOTS" || return 1
   fi

@@ -9,7 +9,7 @@ describe("PrivacyPage", () => {
     expect(metadata.alternates).toEqual({ canonical: "/privacy" });
   });
 
-  it("states the effective date, retention and current tracking configuration", () => {
+  it("states the effective date, retention and consent-gated tracking configuration", () => {
     render(<PrivacyPage />);
 
     expect(
@@ -20,8 +20,11 @@ describe("PrivacyPage", () => {
       screen.getByText(/ไม่เกิน 24 เดือนนับจากการติดต่อล่าสุด/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Google Analytics, Google Ads conversion tag/),
+      screen.getByText(/Google Analytics 4 หรือ Google Ads conversion tag/),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Basic Consent Mode/)).toBeInTheDocument();
+    expect(screen.getByText(/จะไม่ถูกโหลดก่อนที่คุณจะกด/)).toBeInTheDocument();
+    expect(screen.getByText(/ไม่รวมชื่อ เบอร์โทรศัพท์/)).toBeInTheDocument();
     expect(
       screen.getByText(/Google Cloud สำหรับโฮสต์ระบบ/),
     ).toBeInTheDocument();

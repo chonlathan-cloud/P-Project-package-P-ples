@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { MobileActions } from "@/components/mobile-actions";
 import { company } from "@/content/company";
+import { ConsentManager } from "@/features/analytics/consent-manager";
 import { serverEnv } from "@/lib/env";
 import "@/styles/globals.css";
 
@@ -77,6 +78,7 @@ export default function RootLayout({
         <main id="main-content">{children}</main>
         <SiteFooter />
         <MobileActions />
+        <ConsentManager />
       </body>
     </html>
   );

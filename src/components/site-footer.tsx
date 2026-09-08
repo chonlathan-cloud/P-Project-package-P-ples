@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { company } from "@/content/company";
+import { ConsentSettingsButton } from "@/features/analytics/consent-manager";
 
 export function SiteFooter() {
   return (
@@ -44,7 +45,7 @@ export function SiteFooter() {
         <span>© {new Date().getFullYear()} DD Box Printing</span>
         <span>
           <Link href="/privacy">ความเป็นส่วนตัว</Link> ·{" "}
-          <Link href="/terms">เงื่อนไข</Link>
+          <Link href="/terms">เงื่อนไข</Link> · <ConsentSettingsButton />
         </span>
       </div>
     </footer>

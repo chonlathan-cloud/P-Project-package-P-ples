@@ -49,13 +49,16 @@ describe("deployment entrypoints", () => {
     expect(output).toContain("image_tag=legacy-test-tag");
   });
 
-  it("builds the Production web candidate with the approved GTM container", () => {
-    const config = readFileSync(
-      path.join(repositoryRoot, "deploy/cloudbuild-web-prod.yaml"),
-      "utf8",
-    );
+  it.each(["test", "prod"])(
+    "builds the %s web image with the approved GTM container",
+    (environment) => {
+      const config = readFileSync(
+        path.join(repositoryRoot, `deploy/cloudbuild-web-${environment}.yaml`),
+        "utf8",
+      );
 
-    expect(config).toContain("--build-arg=NEXT_PUBLIC_GTM_ID=${_GTM_ID}");
-    expect(config).toContain('_GTM_ID: "GTM-MWW3HWHR"');
-  });
+      expect(config).toContain("--build-arg=NEXT_PUBLIC_GTM_ID=${_GTM_ID}");
+      expect(config).toContain('_GTM_ID: "GTM-MWW3HWHR"');
+    },
+  );
 });

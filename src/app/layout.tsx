@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { MobileActions } from "@/components/mobile-actions";
 import { company } from "@/content/company";
 import { ConsentManager } from "@/features/analytics/consent-manager";
+import { CONSENT_DEFAULT_BOOTSTRAP_SCRIPT } from "@/features/analytics/consent";
 import { serverEnv } from "@/lib/env";
 import "@/styles/globals.css";
 
@@ -66,6 +67,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="th">
+      <head>
+        <script
+          id="ddbox-consent-default"
+          dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT_BOOTSTRAP_SCRIPT }}
+        />
+      </head>
       <body className={`${libreFranklin.variable} ${notoSansThai.variable}`}>
         <script
           type="application/ld+json"

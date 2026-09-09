@@ -1,53 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ANALYTICS_CONSENT_CHANGED_EVENT,
-  ANALYTICS_CONSENT_STORAGE_KEY,
+  DEFAULT_DENIED_CONSENT,
+  GRANTED_CONSENT,
+  LEGACY_ANALYTICS_CONSENT_STORAGE_KEY,
   OPEN_CONSENT_SETTINGS_EVENT,
+  PRIVACY_CONSENT_STORAGE_KEY,
   analyticsLocation,
   isValidGtmId,
-  readAnalyticsConsent,
+  readPrivacyConsent,
   trackAnalyticsEvent,
-  writeAnalyticsConsent,
-  type AnalyticsConsent,
+  writePrivacyConsent,
+  type PrivacyConsentMode,
 } from "./consent";
 
 const configuredGtmId = process.env.NEXT_PUBLIC_GTM_ID ?? "";
 const GTM_SCRIPT_ID = "ddbox-google-tag-manager";
-type ConsentSnapshot = AnalyticsConsent | "unset" | "pending";
-
-const grantedConsent = {
-  ad_storage: "granted",
-  analytics_storage: "granted",
-  ad_user_data: "granted",
-  ad_personalization: "granted",
-};
-
-const deniedConsent = {
-  ad_storage: "denied",
-  analytics_storage: "denied",
-  ad_user_data: "denied",
-  ad_personalization: "denied",
-};
+type ConsentSnapshot = PrivacyConsentMode | "unset" | "pending";
+type ConsentState = typeof DEFAULT_DENIED_CONSENT | typeof GRANTED_CONSENT;
 
 function pushConsentCommand(
   command: "default" | "update",
-  consent: typeof grantedConsent | typeof deniedConsent,
+  consent: ConsentState,
 ) {
   window.dataLayer ??= [];
-  function gtag(...commandArguments: unknown[]) {
+  window.gtag ??= (...commandArguments: unknown[]) => {
     window.dataLayer?.push(commandArguments);
+  };
+  window.gtag("consent", command, consent);
+}
+
+function ensureDefaultDeniedConsent() {
+  if (window.__ddboxConsentDefaultSet) return;
+  pushConsentCommand("default", DEFAULT_DENIED_CONSENT);
+  window.__ddboxConsentDefaultSet = true;
+}
+
+function pushConsentLifecycleEvents(
+  mode: PrivacyConsentMode,
+  includeUpdatedEvent: boolean,
+) {
+  window.dataLayer ??= [];
+  if (mode === "all") {
+    window.dataLayer.push({ event: "ddbox_consent_granted" });
   }
-  gtag("consent", command, consent);
+  if (includeUpdatedEvent) {
+    window.dataLayer.push({
+      event: "ddbox_consent_updated",
+      consent_mode: mode,
+    });
+  }
 }
 
 function loadGoogleTagManager(gtmId: string) {
   if (!isValidGtmId(gtmId) || document.getElementById(GTM_SCRIPT_ID)) return;
 
   window.dataLayer ??= [];
-  pushConsentCommand("default", grantedConsent);
   window.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
 
   const script = document.createElement("script");
@@ -55,6 +66,23 @@ function loadGoogleTagManager(gtmId: string) {
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmId)}`;
   document.head.append(script);
+}
+
+function applyConsentChoice(
+  mode: PrivacyConsentMode,
+  gtmId: string,
+  includeUpdatedEvent: boolean,
+) {
+  ensureDefaultDeniedConsent();
+  if (mode === "all") {
+    pushConsentCommand("update", GRANTED_CONSENT);
+    pushConsentLifecycleEvents(mode, includeUpdatedEvent);
+    loadGoogleTagManager(gtmId);
+    return;
+  }
+
+  pushConsentCommand("update", DEFAULT_DENIED_CONSENT);
+  if (includeUpdatedEvent) pushConsentLifecycleEvents(mode, true);
 }
 
 function classifyTrackedLink(anchor: HTMLAnchorElement) {
@@ -80,7 +108,12 @@ function classifyTrackedLink(anchor: HTMLAnchorElement) {
 
 function subscribeToConsent(onStoreChange: () => void) {
   const storageChanged = (event: StorageEvent) => {
-    if (event.key === ANALYTICS_CONSENT_STORAGE_KEY) onStoreChange();
+    if (
+      event.key === PRIVACY_CONSENT_STORAGE_KEY ||
+      event.key === LEGACY_ANALYTICS_CONSENT_STORAGE_KEY
+    ) {
+      onStoreChange();
+    }
   };
   window.addEventListener(ANALYTICS_CONSENT_CHANGED_EVENT, onStoreChange);
   window.addEventListener("storage", storageChanged);
@@ -91,7 +124,7 @@ function subscribeToConsent(onStoreChange: () => void) {
 }
 
 function getConsentSnapshot(): ConsentSnapshot {
-  return readAnalyticsConsent() ?? "unset";
+  return readPrivacyConsent()?.mode ?? "unset";
 }
 
 function getServerConsentSnapshot(): ConsentSnapshot {
@@ -100,8 +133,10 @@ function getServerConsentSnapshot(): ConsentSnapshot {
 
 export function ConsentManager({
   gtmId = configuredGtmId,
+  reloadPage = () => window.location.reload(),
 }: {
   gtmId?: string;
+  reloadPage?: () => void;
 }) {
   const enabled = isValidGtmId(gtmId);
   const choice = useSyncExternalStore(
@@ -110,11 +145,23 @@ export function ConsentManager({
     getServerConsentSnapshot,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const appliedChoice = useRef<PrivacyConsentMode | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
 
-    if (choice === "granted") loadGoogleTagManager(gtmId);
+    ensureDefaultDeniedConsent();
+    if (
+      (choice === "all" || choice === "necessary") &&
+      appliedChoice.current !== choice
+    ) {
+      applyConsentChoice(choice, gtmId, false);
+      appliedChoice.current = choice;
+    }
+  }, [choice, enabled, gtmId]);
+
+  useEffect(() => {
+    if (!enabled) return;
 
     const openSettings = () => setSettingsOpen(true);
     const trackLink = (event: MouseEvent) => {
@@ -130,30 +177,24 @@ export function ConsentManager({
       window.removeEventListener(OPEN_CONSENT_SETTINGS_EVENT, openSettings);
       document.removeEventListener("click", trackLink);
     };
-  }, [choice, enabled, gtmId]);
+  }, [enabled]);
 
   useEffect(() => {
-    if (choice !== "granted" || window.location.pathname !== "/quote") return;
+    if (choice !== "all" || window.location.pathname !== "/quote") return;
     trackAnalyticsEvent({ event: "quote_start" });
   }, [choice]);
 
   if (!enabled || choice === "pending" || (!settingsOpen && choice !== "unset"))
     return null;
 
-  function choose(nextChoice: AnalyticsConsent) {
-    const previousChoice = readAnalyticsConsent();
-    writeAnalyticsConsent(nextChoice);
+  function choose(nextChoice: PrivacyConsentMode) {
+    const previousChoice = readPrivacyConsent()?.mode;
+    writePrivacyConsent(nextChoice);
     setSettingsOpen(false);
+    applyConsentChoice(nextChoice, gtmId, true);
+    appliedChoice.current = nextChoice;
 
-    if (nextChoice === "granted") {
-      loadGoogleTagManager(gtmId);
-      return;
-    }
-
-    if (previousChoice === "granted" && window.dataLayer) {
-      pushConsentCommand("update", deniedConsent);
-      window.location.reload();
-    }
+    if (nextChoice === "necessary" && previousChoice === "all") reloadPage();
   }
 
   return (
@@ -166,8 +207,9 @@ export function ConsentManager({
         <p className="eyebrow">PRIVACY CHOICE</p>
         <h2 id="tracking-consent-title">เลือกการใช้ข้อมูลบนเว็บไซต์</h2>
         <p id="tracking-consent-description">
-          เว็บไซต์ใช้เฉพาะระบบที่จำเป็นเป็นค่าเริ่มต้น และจะโหลด Google Tag
-          Manager เพื่อวัดผลการใช้งานและโฆษณาเมื่อคุณยอมรับเท่านั้น
+          เว็บไซต์ใช้เฉพาะระบบที่จำเป็นเป็นค่าเริ่มต้น
+          และจะไม่เปิดใช้งานเครื่องมือวิเคราะห์การใช้งานหรือการวัดผลโฆษณา
+          จนกว่าคุณจะให้ความยินยอม
         </p>
         <Link className="text-link" href="/privacy#tracking">
           อ่านรายละเอียดความเป็นส่วนตัว
@@ -177,14 +219,14 @@ export function ConsentManager({
         <button
           className="button-secondary"
           type="button"
-          onClick={() => choose("denied")}
+          onClick={() => choose("necessary")}
         >
           ใช้เฉพาะที่จำเป็น
         </button>
         <button
           className="button"
           type="button"
-          onClick={() => choose("granted")}
+          onClick={() => choose("all")}
         >
           ยอมรับการวัดผลและโฆษณา
         </button>
@@ -208,7 +250,7 @@ export function ConsentSettingsButton({
         window.dispatchEvent(new Event(OPEN_CONSENT_SETTINGS_EVENT))
       }
     >
-      ตั้งค่าการวัดผล
+      ตั้งค่าความเป็นส่วนตัว
     </button>
   );
 }

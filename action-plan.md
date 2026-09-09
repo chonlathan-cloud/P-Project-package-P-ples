@@ -457,6 +457,15 @@ to the necessary-only experience, and exposes a footer control for changing
 the saved choice. Application-owned `dataLayer` events use a typed allowlist
 and exclude lead contact data, job details, artwork, and attachment URLs.
 
+Refinement (2026-09-09): Consent defaults for the four Consent Mode v2 signals
+are queued as `denied` before application scripts. The binary choice is stored
+as a versioned first-party `ddbox_privacy_consent` record; legacy consent values
+are migrated without prompting returning visitors again. Choosing all enables
+the container only after the same-page consent update and emits
+`ddbox_consent_granted` plus `ddbox_consent_updated`. Choosing necessary keeps
+the container blocked. Changing from all to necessary persists the revocation,
+updates consent to denied, and reloads the page so measurement stops cleanly.
+
 Define and document events before implementation:
 
 - `primary_cta_click`

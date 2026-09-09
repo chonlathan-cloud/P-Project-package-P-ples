@@ -466,6 +466,22 @@ the container only after the same-page consent update and emits
 the container blocked. Changing from all to necessary persists the revocation,
 updates consent to denied, and reloads the page so measurement stops cleanly.
 
+Event contract (2026-09-09): Application events remain internal `dataLayer`
+names and GTM maps them to reporting names. A successful, runtime-validated
+lead receipt emits `quote_submit` once with only `customer_path` and a
+non-MOQ `quantity_band`; GTM maps it to GA4 `generate_lead`. Contact links emit
+`line_click` or `phone_click` with an allowlisted page `location` and
+`contact_context` (`general` or `after_quote`); GTM maps them to `click_line`
+and `click_call`. Every event is rebuilt from a runtime allowlist and is dropped
+when consent is absent or necessary-only. Measurement failures never fail lead
+capture, navigation, LINE, or telephone actions. A LINE click means only that
+the website link was activated, not that a message was sent. The application
+does not emit lead events from the thank-you page.
+
+Before publishing GA4 tags, redact the `reference` query parameter, disable
+automatic outbound-click measurement, verify automatic form interactions, and
+isolate non-production hostnames from the Production GA4 data stream.
+
 Define and document events before implementation:
 
 - `primary_cta_click`

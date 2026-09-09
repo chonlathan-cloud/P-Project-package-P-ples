@@ -31,10 +31,24 @@ describe("ThankYouPage", () => {
     const lineLink = screen.getByRole("link", {
       name: "เปิด LINE พร้อมรหัสอ้างอิง",
     });
+    expect(lineLink).toHaveAttribute("data-contact-context", "after_quote");
     const lineUrl = new URL(lineLink.getAttribute("href")!);
     expect(lineUrl.origin).toBe("https://line.me");
     expect(decodeURIComponent(lineUrl.pathname)).toContain(company.lineOaId);
     expect(decodeURIComponent(lineUrl.search.slice(1))).toContain(reference);
+    expect(
+      screen.getByRole("link", {
+        name: `สแกนเพื่อเปิด LINE OA และส่งรหัสอ้างอิง ${reference}`,
+      }),
+    ).toHaveAttribute("data-contact-context", "after_quote");
+  });
+
+  it("does not create another lead event when the thank-you page is rendered", async () => {
+    window.dataLayer = [];
+
+    await renderPage("DD-44F2F48F6E");
+
+    expect(window.dataLayer).toEqual([]);
   });
 
   it("copies the reference and announces success", async () => {

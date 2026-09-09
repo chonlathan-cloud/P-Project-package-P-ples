@@ -73,7 +73,11 @@ export function ThankYouActions({ reference }: { reference?: string }) {
               : "เพิ่มเพื่อน LINE OA เพื่อส่งรูปหรือรายละเอียดเพิ่มเติม ขั้นตอนนี้ไม่บังคับ"}
           </p>
           <div className="confirmation-actions">
-            <a className="button" href={lineHref}>
+            <a
+              className="button"
+              href={lineHref}
+              data-contact-context="after_quote"
+            >
               {reference
                 ? "เปิด LINE พร้อมรหัสอ้างอิง"
                 : `เพิ่มเพื่อน LINE OA ${company.lineOaId}`}
@@ -86,6 +90,7 @@ export function ThankYouActions({ reference }: { reference?: string }) {
         <a
           className="contact-oa-qr confirmation-qr"
           href={lineHref}
+          data-contact-context="after_quote"
           aria-label={
             reference
               ? `สแกนเพื่อเปิด LINE OA และส่งรหัสอ้างอิง ${reference}`

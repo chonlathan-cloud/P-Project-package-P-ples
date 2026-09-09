@@ -27,9 +27,7 @@ describe("PrivacyPage", () => {
     expect(
       screen.getByText(/พื้นที่จัดเก็บข้อมูลของเว็บไซต์นี้/),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/ตั้งค่าความเป็นส่วนตัว/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/ตั้งค่าความเป็นส่วนตัว/)).toBeInTheDocument();
     expect(screen.getByText(/ไม่รวมชื่อ เบอร์โทรศัพท์/)).toBeInTheDocument();
     expect(
       screen.getByText(/Google Cloud สำหรับโฮสต์ระบบ/),

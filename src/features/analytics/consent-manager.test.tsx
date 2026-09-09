@@ -1,15 +1,7 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConsentManager, ConsentSettingsButton } from "./consent-manager";
-import {
-  PRIVACY_CONSENT_STORAGE_KEY,
-  writePrivacyConsent,
-} from "./consent";
+import { PRIVACY_CONSENT_STORAGE_KEY, writePrivacyConsent } from "./consent";
 
 const gtmId = "GTM-MWW3HWHR";
 
@@ -216,5 +208,107 @@ describe("ConsentManager", () => {
       ad_personalization: "denied",
     });
     expect(reloadPage).toHaveBeenCalledOnce();
+  });
+
+  it("classifies only allowlisted LINE hosts and includes contact context", async () => {
+    writePrivacyConsent("all", "2026-09-09T08:05:00.000Z");
+    window.dataLayer = [];
+    render(
+      <>
+        <ConsentManager gtmId={gtmId} />
+        <div className="site-footer">
+          <a
+            href="https://lin.ee/example"
+            onClick={(event) => event.preventDefault()}
+          >
+            LINE ทั่วไป
+          </a>
+        </div>
+        <a
+          href="https://line.me/R/oaMessage/example"
+          data-contact-context="after_quote"
+          onClick={(event) => event.preventDefault()}
+        >
+          LINE หลังส่งฟอร์ม
+        </a>
+        <a
+          href="https://line.me.attacker.example/path"
+          onClick={(event) => event.preventDefault()}
+        >
+          ลิงก์ที่ไม่ใช่ LINE
+        </a>
+        <div className="mobile-actions">
+          <a
+            href="tel:0846789714"
+            data-contact-context="after_quote"
+            onClick={(event) => event.preventDefault()}
+          >
+            โทรหลังส่งฟอร์ม
+          </a>
+        </div>
+      </>,
+    );
+    await waitFor(() =>
+      expect(
+        document.getElementById("ddbox-google-tag-manager"),
+      ).toBeInTheDocument(),
+    );
+    window.dataLayer = [];
+
+    fireEvent.click(screen.getByRole("link", { name: "LINE ทั่วไป" }));
+    fireEvent.click(screen.getByRole("link", { name: "LINE หลังส่งฟอร์ม" }));
+    fireEvent.click(screen.getByRole("link", { name: "ลิงก์ที่ไม่ใช่ LINE" }));
+    fireEvent.click(screen.getByRole("link", { name: "โทรหลังส่งฟอร์ม" }));
+
+    expect(window.dataLayer).toEqual([
+      {
+        event: "line_click",
+        location: "footer",
+        contact_context: "general",
+      },
+      {
+        event: "line_click",
+        location: "content",
+        contact_context: "after_quote",
+      },
+      {
+        event: "phone_click",
+        location: "mobile",
+        contact_context: "after_quote",
+      },
+    ]);
+  });
+
+  it("keeps contact links functional without measurement consent", () => {
+    writePrivacyConsent("necessary", "2026-09-09T08:00:00.000Z");
+    window.dataLayer = [];
+    render(
+      <>
+        <ConsentManager gtmId={gtmId} />
+        <a href="tel:0846789714" onClick={(event) => event.preventDefault()}>
+          โทรหาเรา
+        </a>
+        <a
+          href="https://line.me/R/ti/p/example"
+          onClick={(event) => event.preventDefault()}
+        >
+          เปิด LINE
+        </a>
+      </>,
+    );
+    window.dataLayer = [];
+
+    fireEvent.click(screen.getByRole("link", { name: "โทรหาเรา" }));
+    fireEvent.click(screen.getByRole("link", { name: "เปิด LINE" }));
+
+    expect(window.dataLayer).toEqual([]);
+    expect(screen.getByRole("link", { name: "โทรหาเรา" })).toHaveAttribute(
+      "href",
+      "tel:0846789714",
+    );
+    expect(screen.getByRole("link", { name: "เปิด LINE" })).toHaveAttribute(
+      "href",
+      "https://line.me/R/ti/p/example",
+    );
   });
 });

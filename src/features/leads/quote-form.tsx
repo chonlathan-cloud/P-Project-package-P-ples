@@ -3,8 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { trackAnalyticsEvent } from "@/features/analytics/consent";
-import { quoteFormSchema, toLeadPayload, type QuoteFormValues } from "./schema";
+import {
+  quantityBand,
+  trackAnalyticsEvent,
+} from "@/features/analytics/consent";
+import {
+  leadReceiptSchema,
+  quoteFormSchema,
+  toLeadPayload,
+  type LeadReceipt,
+  type QuoteFormValues,
+} from "./schema";
 
 type Path = QuoteFormValues["customer_path"];
 
@@ -53,6 +62,9 @@ export function QuoteForm({
   const stepPanel = useRef<HTMLDivElement>(null);
   const hasRendered = useRef(false);
   const idempotencyKey = useRef<string | null>(null);
+  const submissionInFlight = useRef(false);
+  const submissionCompleted = useRef(false);
+  const measuredReferences = useRef(new Set<string>());
 
   useEffect(() => {
     if (hasRendered.current) stepPanel.current?.focus();
@@ -100,6 +112,8 @@ export function QuoteForm({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submissionInFlight.current || submissionCompleted.current) return;
+
     const result = quoteFormSchema.safeParse(values);
     if (!result.success) {
       const nextErrors: Record<string, string> = {};
@@ -109,9 +123,14 @@ export function QuoteForm({
       queueMicrotask(() => errorSummary.current?.focus());
       return;
     }
+
+    submissionInFlight.current = true;
     setStatus("submitting");
     if (!idempotencyKey.current)
       idempotencyKey.current = `${crypto.randomUUID()}-${Date.now()}`;
+
+    const leadPayload = toLeadPayload(result.data);
+    let receipt: LeadReceipt | null = null;
     try {
       const response = await fetch("/api/leads", {
         method: "POST",
@@ -119,7 +138,7 @@ export function QuoteForm({
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey.current,
         },
-        body: JSON.stringify(toLeadPayload(values)),
+        body: JSON.stringify(leadPayload),
       });
       if (!response.ok) {
         const problem = (await response.json().catch(() => null)) as {
@@ -127,21 +146,43 @@ export function QuoteForm({
         } | null;
         throw new Error(problem?.request_id ?? "unknown");
       }
-      const receipt = (await response.json()) as { reference: string };
-      trackAnalyticsEvent({
-        event: "quote_submit",
-        customer_path: values.customer_path,
-      });
-      router.push(
-        `/thank-you?reference=${encodeURIComponent(receipt.reference)}`,
+
+      submissionCompleted.current = true;
+      const parsedReceipt = leadReceiptSchema.safeParse(
+        await response.json().catch(() => null),
       );
+      if (parsedReceipt.success) receipt = parsedReceipt.data;
     } catch (error) {
+      submissionInFlight.current = false;
       setStatus("error");
       setErrors({
         form: `ยังส่งข้อมูลไม่ได้ กรุณาลองใหม่ (รหัสคำขอ ${error instanceof Error ? error.message : "unknown"})`,
       });
       queueMicrotask(() => errorSummary.current?.focus());
+      return;
     }
+
+    submissionInFlight.current = false;
+    if (!receipt) {
+      router.push("/thank-you");
+      return;
+    }
+
+    if (!measuredReferences.current.has(receipt.reference)) {
+      measuredReferences.current.add(receipt.reference);
+      trackAnalyticsEvent({
+        event: "quote_submit",
+        customer_path: result.data.customer_path,
+        quantity_band:
+          result.data.customer_path === "has_specifications"
+            ? quantityBand(leadPayload.quantity)
+            : "unknown",
+      });
+    }
+
+    router.push(
+      `/thank-you?reference=${encodeURIComponent(receipt.reference)}`,
+    );
   }
 
   return (
@@ -244,6 +285,7 @@ export function QuoteForm({
                   checked={values.customer_path === "needs_guidance"}
                   onChange={() => {
                     update("customer_path", "needs_guidance");
+                    update("quantity", "");
                     trackAnalyticsEvent({
                       event: "customer_path_selected",
                       customer_path: "needs_guidance",

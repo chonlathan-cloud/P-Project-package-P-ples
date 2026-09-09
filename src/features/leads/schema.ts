@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const leadReceiptSchema = z.object({
+  reference: z.string().regex(/^DD-[A-F0-9]{10}$/),
+  duplicate: z.boolean(),
+});
+
+export type LeadReceipt = z.infer<typeof leadReceiptSchema>;
+
 export const quoteFormSchema = z
   .object({
     customer_path: z.enum(["has_specifications", "needs_guidance"]),

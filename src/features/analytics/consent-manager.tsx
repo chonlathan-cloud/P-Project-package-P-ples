@@ -19,6 +19,7 @@ import {
 
 const configuredGtmId = process.env.NEXT_PUBLIC_GTM_ID ?? "";
 const GTM_SCRIPT_ID = "ddbox-google-tag-manager";
+const LINE_HOSTNAMES = new Set(["line.me", "lin.ee"]);
 type ConsentSnapshot = PrivacyConsentMode | "unset" | "pending";
 type ConsentState = typeof DEFAULT_DENIED_CONSENT | typeof GRANTED_CONSENT;
 
@@ -88,13 +89,33 @@ function applyConsentChoice(
 function classifyTrackedLink(anchor: HTMLAnchorElement) {
   const href = anchor.getAttribute("href") ?? "";
   const location = analyticsLocation(anchor);
+  const contactContext =
+    anchor.dataset.contactContext === "after_quote" ? "after_quote" : "general";
+  let url: URL | null = null;
 
-  if (href.startsWith("tel:")) {
-    trackAnalyticsEvent({ event: "phone_click", location });
+  try {
+    url = new URL(href, window.location.href);
+  } catch {
+    // Invalid links remain navigable but are not classified for measurement.
+  }
+
+  if (url?.protocol === "tel:") {
+    trackAnalyticsEvent({
+      event: "phone_click",
+      location,
+      contact_context: contactContext,
+    });
     return;
   }
-  if (href.includes("line.me") || href.includes("lin.ee")) {
-    trackAnalyticsEvent({ event: "line_click", location });
+  if (
+    url?.protocol === "https:" &&
+    LINE_HOSTNAMES.has(url.hostname.toLowerCase())
+  ) {
+    trackAnalyticsEvent({
+      event: "line_click",
+      location,
+      contact_context: contactContext,
+    });
     return;
   }
   if (href === "/quote" || href.startsWith("/quote?")) {
@@ -223,11 +244,7 @@ export function ConsentManager({
         >
           ใช้เฉพาะที่จำเป็น
         </button>
-        <button
-          className="button"
-          type="button"
-          onClick={() => choose("all")}
-        >
+        <button className="button" type="button" onClick={() => choose("all")}>
           ยอมรับการวัดผลและโฆษณา
         </button>
       </div>

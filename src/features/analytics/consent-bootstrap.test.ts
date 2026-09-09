@@ -6,9 +6,7 @@ import {
 
 describe("consent bootstrap", () => {
   it("queues every Consent Mode v2 value as denied without loading Google", () => {
-    for (const [consentType, value] of Object.entries(
-      DEFAULT_DENIED_CONSENT,
-    )) {
+    for (const [consentType, value] of Object.entries(DEFAULT_DENIED_CONSENT)) {
       expect(CONSENT_DEFAULT_BOOTSTRAP_SCRIPT).toContain(
         `${consentType}: '${value}'`,
       );

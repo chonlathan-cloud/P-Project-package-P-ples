@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { captureAttributionIfAllowed } from "@/features/analytics/attribution";
 import { writePrivacyConsent } from "@/features/analytics/consent";
 import { QuoteForm } from "./quote-form";
 
@@ -76,6 +77,7 @@ describe("QuoteForm", () => {
     vi.stubGlobal("fetch", fetchMock);
     window.localStorage.clear();
     window.dataLayer = [];
+    window.history.replaceState({}, "", "/quote");
   });
 
   it("discloses all three steps and uses outcome-based actions", () => {
@@ -180,9 +182,67 @@ describe("QuoteForm", () => {
         ),
       );
       expect(fetchMock).toHaveBeenCalledOnce();
+      expect(
+        JSON.parse(fetchMock.mock.calls[0][1].body as string),
+      ).toMatchObject({
+        measurement_consent: {
+          mode: consentMode,
+          version: consentMode === "unset" ? null : 1,
+          updated_at:
+            consentMode === "unset" ? null : "2026-09-09T08:00:00.000Z",
+        },
+        attribution: null,
+      });
       expect(quoteSubmitEvents()).toEqual([]);
     },
   );
+
+  it("submits a consented attribution snapshot without raw query in page fields", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/quote?utm_source=google&utm_medium=cpc&utm_campaign=qa_attribution&gclid=TEST-GCLID",
+    );
+    writePrivacyConsent("all", "2026-09-10T08:05:00.000Z");
+    captureAttributionIfAllowed(
+      window.location.href,
+      new Date("2026-09-10T08:06:00.000Z"),
+    );
+    fetchMock.mockResolvedValueOnce(responseWithReceipt());
+    completeValidForm("needs_guidance");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "ส่งข้อมูลเพื่อให้ทีมประเมิน" }),
+    );
+
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledOnce());
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(payload).toMatchObject({
+      landing_page: `${window.location.origin}/quote`,
+      submission_path: "/quote",
+      measurement_consent: {
+        mode: "all",
+        version: 1,
+        updated_at: "2026-09-10T08:05:00.000Z",
+      },
+      attribution: {
+        schema_version: 1,
+        model: "first_last_tagged",
+        first_touch: {
+          utm_campaign: "qa_attribution",
+          gclid: "TEST-GCLID",
+          landing_path: "/quote",
+        },
+        last_touch: {
+          utm_campaign: "qa_attribution",
+          gclid: "TEST-GCLID",
+          landing_path: "/quote",
+        },
+      },
+    });
+    expect(payload.landing_page).not.toContain("?");
+    expect(payload.submission_path).not.toContain("?");
+  });
 
   it.each([
     {

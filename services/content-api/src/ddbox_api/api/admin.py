@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, Query, Request, Response, status
@@ -7,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, Query, Request,
 from ddbox_api.auth import AdminPrincipal, require_admin
 from ddbox_api.dependencies import (
     get_gallery_service,
+    get_lead_export_service,
     get_media_store,
     get_revalidation,
     get_structured_content_service,
@@ -27,11 +29,32 @@ from ddbox_api.domain.models import (
     UploadSessionCreate,
 )
 from ddbox_api.services.gallery import GalleryService
+from ddbox_api.services.lead_exports import LeadExportService
 from ddbox_api.services.media import MediaStore
 from ddbox_api.services.revalidation import RevalidationGateway
 from ddbox_api.services.structured_content import StructuredContentService
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
+
+
+@router.get("/leads/export")
+def export_leads(
+    created_from: Annotated[datetime, Query()],
+    created_to: Annotated[datetime, Query()],
+    _principal: Annotated[AdminPrincipal, Depends(require_admin)],
+    service: Annotated[LeadExportService, Depends(get_lead_export_service)],
+) -> Response:
+    export = service.create(created_from, created_to)
+    return Response(
+        content=export.content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="{export.filename}"',
+            "X-DDBox-Export-ID": export.export_id,
+            "X-DDBox-Record-Count": str(export.record_count),
+        },
+    )
 
 
 @router.post("/gallery-items", response_model=GalleryItem, status_code=status.HTTP_201_CREATED)

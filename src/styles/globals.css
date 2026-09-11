@@ -2776,6 +2776,90 @@ h3 {
   align-items: start;
   margin-bottom: 36px;
 }
+.admin-resource-nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  border-block: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.admin-resource-nav button {
+  min-height: 72px;
+  border: 0;
+  border-bottom: 4px solid transparent;
+  padding: 12px 16px;
+  color: var(--color-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-resource-nav button:hover {
+  background: var(--color-surface-subtle);
+}
+.admin-resource-nav button[aria-current="page"] {
+  border-bottom-color: var(--color-action-strong);
+  background: var(--color-surface-subtle);
+}
+.admin-resource-nav button span,
+.admin-resource-nav button small {
+  display: block;
+}
+.admin-resource-nav button span {
+  font-weight: 700;
+}
+.admin-resource-nav button small {
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.admin-resource {
+  margin-top: 48px;
+}
+.admin-resource-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 32px;
+  align-items: end;
+  margin-bottom: 32px;
+  border-bottom: 2px solid var(--color-text);
+  padding-bottom: 24px;
+}
+.admin-resource-heading h2 {
+  font-size: clamp(1.75rem, 3vw, 2.6rem);
+}
+.admin-resource-heading > p {
+  max-width: 58ch;
+  color: var(--color-text-muted);
+}
+.admin-lead-export {
+  max-width: 840px;
+  display: grid;
+  gap: 20px;
+  border: 1px solid var(--color-border);
+  padding: 28px;
+  background: var(--color-surface);
+}
+.admin-export-field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.admin-export-note {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 15px;
+}
+.admin-lead-export > .button {
+  justify-self: start;
+}
+.admin-feedback-stack {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+.admin-feedback {
+  margin: 0;
+}
 .admin-shell h1 {
   font-size: clamp(2rem, 4vw, 3.4rem);
 }
@@ -3187,6 +3271,21 @@ h3 {
     padding-bottom: calc(58px + env(safe-area-inset-bottom));
     font-size: 16px;
     line-height: 1.6;
+  }
+  .admin-page {
+    padding-block: 40px;
+  }
+  .admin-shell > header,
+  .admin-resource-heading {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .admin-export-field-row {
+    grid-template-columns: 1fr;
+  }
+  .admin-lead-export {
+    padding: 20px;
   }
   body:has(.products-page),
   body:has(.product-detail-hero),

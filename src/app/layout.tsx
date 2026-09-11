@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Libre_Franklin, Noto_Sans_Thai } from "next/font/google";
+import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { MobileActions } from "@/components/mobile-actions";
@@ -85,7 +86,9 @@ export default function RootLayout({
         <main id="main-content">{children}</main>
         <SiteFooter />
         <MobileActions />
-        <ConsentManager />
+        <Suspense fallback={null}>
+          <ConsentManager />
+        </Suspense>
       </body>
     </html>
   );

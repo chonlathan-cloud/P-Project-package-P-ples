@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
   return new NextResponse(await response.text(), {
     status: response.status,
     headers: {
+      "Cache-Control": "no-store",
       "Content-Type":
         response.headers.get("Content-Type") ?? "application/json",
       "X-Request-ID": response.headers.get("X-Request-ID") ?? "unknown",

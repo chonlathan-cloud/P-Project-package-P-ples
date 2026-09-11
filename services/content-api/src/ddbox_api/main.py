@@ -26,6 +26,7 @@ from ddbox_api.repositories.base import ContentRepository
 from ddbox_api.repositories.firestore import FirestoreContentRepository
 from ddbox_api.repositories.memory import InMemoryContentRepository
 from ddbox_api.services.gallery import GalleryService
+from ddbox_api.services.lead_exports import LeadExportService
 from ddbox_api.services.leads import (
     GmailFallbackNotificationGateway,
     LeadService,
@@ -172,6 +173,10 @@ def create_app(
         _notification_gateway(active_settings),
         _task_publisher(active_settings),
     )
+    app.state.lead_export_service = LeadExportService(
+        app.state.repository,
+        active_settings.environment,
+    )
     app.state.line_webhook_service = LineWebhookService(
         app.state.repository, active_settings.line_channel_secret
     )
@@ -192,6 +197,12 @@ def create_app(
             "Content-Type",
             "Idempotency-Key",
             "X-Media-Finalize-Token",
+            "X-Request-ID",
+        ],
+        expose_headers=[
+            "Content-Disposition",
+            "X-DDBox-Export-ID",
+            "X-DDBox-Record-Count",
             "X-Request-ID",
         ],
     )

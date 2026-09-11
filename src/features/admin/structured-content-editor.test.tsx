@@ -79,9 +79,9 @@ describe("StructuredContentEditor", () => {
       (request) => request.init?.method === "POST",
     );
     expect(createRequest?.url.endsWith("/v1/admin/products")).toBe(true);
-    expect(createRequest?.init?.headers).toMatchObject({
-      Authorization: "Bearer admin-token",
-    });
+    expect(new Headers(createRequest?.init?.headers).get("Authorization")).toBe(
+      "Bearer admin-token",
+    );
     await waitFor(() => expect(user.getIdToken).toHaveBeenCalled());
   });
 });

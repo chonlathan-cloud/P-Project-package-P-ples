@@ -4,14 +4,25 @@ import hashlib
 import json
 import logging
 import smtplib
-from datetime import timedelta
+from datetime import datetime, timedelta
 from email.message import EmailMessage
+from typing import Literal
 from uuid import uuid4
 
 import httpx
 
 from ddbox_api.domain.errors import NotFoundError, ServiceUnavailableError
-from ddbox_api.domain.models import LeadCreate, LeadReceipt, NotificationStatus, StoredLead, utc_now
+from ddbox_api.domain.models import (
+    LEAD_BUSINESS_FIELDS,
+    AttributionDropReason,
+    AttributionStatus,
+    LeadCreate,
+    LeadReceipt,
+    MeasurementConsentMode,
+    NotificationStatus,
+    StoredLead,
+    utc_now,
+)
 from ddbox_api.repositories.base import (
     ContentRepository,
     NotificationGateway,
@@ -20,6 +31,88 @@ from ddbox_api.repositories.base import (
 from ddbox_api.services.line_flex import build_lead_flex_message, customer_path_label
 
 logger = logging.getLogger(__name__)
+
+BUSINESS_FINGERPRINT_VERSION: Literal[2] = 2
+_LEGACY_FINGERPRINT_FIELDS = set(LEAD_BUSINESS_FIELDS) | {
+    "campaign_source",
+    "landing_page",
+}
+
+
+def _fingerprint(payload: LeadCreate, fields: set[str]) -> str:
+    canonical = json.dumps(
+        payload.model_dump(mode="json", include=fields),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _prepare_attribution(
+    payload: LeadCreate,
+    received_at: datetime,
+) -> tuple[LeadCreate, AttributionStatus, AttributionDropReason | None]:
+    if received_at.tzinfo is None or received_at.utcoffset() is None:
+        raise TypeError("received_at must be a timezone-aware datetime")
+    now = received_at
+    drop_reason = payload.attribution_drop_reason
+    if drop_reason is not None:
+        status = (
+            AttributionStatus.CONSENT_DENIED
+            if drop_reason == AttributionDropReason.CONSENT_NOT_GRANTED
+            else AttributionStatus.UNAVAILABLE
+            if drop_reason == AttributionDropReason.CONSENT_UNAVAILABLE
+            else AttributionStatus.INVALID
+        )
+        return payload, status, drop_reason
+
+    attribution = payload.attribution
+    if attribution is None:
+        if payload.measurement_consent is None:
+            return payload, AttributionStatus.LEGACY_UNKNOWN, None
+        if payload.measurement_consent.mode == MeasurementConsentMode.NECESSARY:
+            return payload, AttributionStatus.CONSENT_DENIED, None
+        if payload.measurement_consent.mode == MeasurementConsentMode.UNSET:
+            return payload, AttributionStatus.UNAVAILABLE, None
+        return payload, AttributionStatus.NO_VALID_TOUCH, None
+
+    first_touch = attribution.first_touch
+    last_touch = attribution.last_touch
+    if first_touch is None or last_touch is None:
+        sanitized = payload.model_copy(update={"attribution": None})
+        return (
+            sanitized,
+            AttributionStatus.INVALID,
+            AttributionDropReason.INVALID_ATTRIBUTION,
+        )
+
+    maximum_client_time = now + timedelta(minutes=5)
+    if (
+        first_touch.captured_at > maximum_client_time
+        or last_touch.captured_at > maximum_client_time
+    ):
+        sanitized = payload.model_copy(update={"attribution": None})
+        return (
+            sanitized,
+            AttributionStatus.INVALID,
+            AttributionDropReason.CLIENT_TIME_INVALID,
+        )
+
+    active_first = first_touch if first_touch.expires_at > now else None
+    active_last = last_touch if last_touch.expires_at > now else None
+    if active_first is None and active_last is None:
+        sanitized = payload.model_copy(update={"attribution": None})
+        return sanitized, AttributionStatus.EXPIRED, None
+    if active_first is None or active_last is None:
+        retained = active_first or active_last
+        if retained is None:
+            raise RuntimeError("active attribution disappeared during normalization")
+        attribution = attribution.model_copy(
+            update={"first_touch": retained, "last_touch": retained}
+        )
+        payload = payload.model_copy(update={"attribution": attribution})
+    return payload, AttributionStatus.CAPTURED, None
 
 
 class LoggingNotificationGateway:
@@ -137,13 +230,10 @@ class LeadService:
         return self._task_publisher is not None
 
     def create(self, payload: LeadCreate, idempotency_key: str) -> tuple[LeadReceipt, str]:
-        canonical = json.dumps(
-            payload.model_dump(mode="json"),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        fingerprint = hashlib.sha256(canonical.encode()).hexdigest()
+        received_at = utc_now()
+        legacy_fingerprint = _fingerprint(payload, _LEGACY_FINGERPRINT_FIELDS)
+        payload, attribution_status, drop_reason = _prepare_attribution(payload, received_at)
+        fingerprint = _fingerprint(payload, set(LEAD_BUSINESS_FIELDS))
         key_hash = hashlib.sha256(idempotency_key.encode()).hexdigest()
         lead_id = uuid4().hex
         lead = StoredLead(
@@ -151,10 +241,26 @@ class LeadService:
             reference=f"DD-{lead_id[:10].upper()}",
             payload=payload,
             payload_fingerprint=fingerprint,
+            payload_fingerprint_version=BUSINESS_FINGERPRINT_VERSION,
             idempotency_hash=key_hash,
-            created_at=utc_now(),
+            created_at=received_at,
+            attribution_status=attribution_status,
+            attribution_drop_reason=drop_reason,
         )
-        stored, duplicate = self._repository.create_lead_once(lead, key_hash, fingerprint)
+        stored, duplicate = self._repository.create_lead_once(
+            lead,
+            key_hash,
+            fingerprint,
+            frozenset({legacy_fingerprint}),
+        )
+        if not duplicate and drop_reason is not None:
+            logger.info(
+                "lead_attribution_dropped",
+                extra={
+                    "lead_reference": stored.reference,
+                    "reason_code": drop_reason.value,
+                },
+            )
         return LeadReceipt(reference=stored.reference, duplicate=duplicate), stored.id
 
     def enqueue_notification(self, lead_id: str) -> None:

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { captureAttributionIfAllowed, clearAttribution } from "./attribution";
 import {
   ANALYTICS_CONSENT_CHANGED_EVENT,
   DEFAULT_DENIED_CONSENT,
@@ -165,6 +167,9 @@ export function ConsentManager({
     getConsentSnapshot,
     getServerConsentSnapshot,
   );
+  const pathname = usePathname();
+  const searchParameters = useSearchParams();
+  const trackedLocation = `${pathname}${searchParameters.size > 0 ? `?${searchParameters.toString()}` : ""}`;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const appliedChoice = useRef<PrivacyConsentMode | null>(null);
 
@@ -180,6 +185,15 @@ export function ConsentManager({
       appliedChoice.current = choice;
     }
   }, [choice, enabled, gtmId]);
+
+  useEffect(() => {
+    if (!enabled || choice === "pending") return;
+    if (choice === "all") {
+      captureAttributionIfAllowed(trackedLocation);
+      return;
+    }
+    clearAttribution();
+  }, [choice, enabled, trackedLocation]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -210,10 +224,12 @@ export function ConsentManager({
 
   function choose(nextChoice: PrivacyConsentMode) {
     const previousChoice = readPrivacyConsent()?.mode;
+    if (nextChoice === "necessary") clearAttribution();
     writePrivacyConsent(nextChoice);
     setSettingsOpen(false);
     applyConsentChoice(nextChoice, gtmId, true);
     appliedChoice.current = nextChoice;
+    if (nextChoice === "all") captureAttributionIfAllowed(trackedLocation);
 
     if (nextChoice === "necessary" && previousChoice === "all") reloadPage();
   }

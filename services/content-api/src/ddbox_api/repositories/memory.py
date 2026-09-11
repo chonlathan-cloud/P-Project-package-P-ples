@@ -15,6 +15,7 @@ from ddbox_api.domain.models import (
     PricingBenchmark,
     StoredLead,
     StructuredContent,
+    lead_business_data,
     utc_now,
 )
 
@@ -219,12 +220,21 @@ class InMemoryContentRepository:
         lead: StoredLead,
         idempotency_hash: str,
         payload_fingerprint: str,
+        compatible_payload_fingerprints: frozenset[str] = frozenset(),
     ) -> tuple[StoredLead, bool]:
         with self._lock:
             existing_id = self._idempotency.get(idempotency_hash)
             if existing_id:
                 existing = self._leads[existing_id]
-                if existing.payload_fingerprint != payload_fingerprint:
+                accepted_fingerprints = compatible_payload_fingerprints | {payload_fingerprint}
+                compatible_legacy_payload = (
+                    existing.payload_fingerprint_version == 1
+                    and lead_business_data(existing.payload) == lead_business_data(lead.payload)
+                )
+                if (
+                    existing.payload_fingerprint not in accepted_fingerprints
+                    and not compatible_legacy_payload
+                ):
                     raise ConflictError("idempotency key was already used for another payload")
                 return existing.model_copy(deep=True), True
             self._leads[lead.id] = lead.model_copy(deep=True)
@@ -235,6 +245,31 @@ class InMemoryContentRepository:
         with self._lock:
             lead = self._leads.get(lead_id)
             return lead.model_copy(deep=True) if lead else None
+
+    def list_leads(
+        self,
+        created_from: datetime,
+        created_to: datetime,
+        *,
+        after_id: str | None = None,
+        limit: int = 500,
+    ) -> list[StoredLead]:
+        with self._lock:
+            leads = sorted(
+                (
+                    lead
+                    for lead in self._leads.values()
+                    if created_from <= lead.created_at < created_to
+                ),
+                key=lambda lead: (lead.created_at, lead.id),
+            )
+            if after_id is not None:
+                after = self._leads.get(after_id)
+                if after is None:
+                    return []
+                cursor = (after.created_at, after.id)
+                leads = [lead for lead in leads if (lead.created_at, lead.id) > cursor]
+            return [lead.model_copy(deep=True) for lead in leads[:limit]]
 
     def claim_notification(
         self, lead_id: str, lease_until: datetime

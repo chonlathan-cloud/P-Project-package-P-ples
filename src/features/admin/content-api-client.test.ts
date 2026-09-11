@@ -1,6 +1,6 @@
 import type { User } from "firebase/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { adminApi, AdminApiError } from "./content-api-client";
+import { adminApi, adminDownload, AdminApiError } from "./content-api-client";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -137,5 +137,39 @@ describe("adminApi", () => {
       }),
     );
     expect((error as Error).message).not.toContain("original_filename");
+  });
+
+  it("downloads an authenticated workbook and reads export metadata", async () => {
+    const user = {
+      getIdToken: vi.fn().mockResolvedValue("token"),
+    } as unknown as User;
+    const workbook = new Uint8Array([80, 75, 3, 4]);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(workbook, {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition":
+            'attachment; filename="DD_BOX_Leads_20260910T120000Z.xlsx"',
+          "X-DDBox-Export-ID": "export-1",
+          "X-DDBox-Record-Count": "12",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const download = await adminDownload(
+      user,
+      "/v1/admin/leads/export?created_from=start&created_to=end",
+    );
+
+    expect(download.filename).toBe("DD_BOX_Leads_20260910T120000Z.xlsx");
+    expect(download.exportId).toBe("export-1");
+    expect(download.recordCount).toBe(12);
+    expect(download.blob.size).toBe(4);
+    const headers = new Headers(fetchMock.mock.calls[0][1].headers);
+    expect(headers.get("Authorization")).toBe("Bearer token");
+    expect(headers.get("Accept")).toContain("spreadsheetml.sheet");
   });
 });

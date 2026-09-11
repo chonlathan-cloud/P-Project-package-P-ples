@@ -9,16 +9,22 @@ import {
 import { useEffect, useState } from "react";
 import { AdminGalleryEditor } from "@/features/gallery/admin-gallery-editor";
 import { getFirebaseAuth } from "@/lib/firebase-client";
+import { LeadExportPanel } from "./lead-export-panel";
 import { StructuredContentEditor } from "./structured-content-editor";
 import type { ContentKind } from "./types";
 
-type WorkspaceResource = "gallery" | ContentKind;
+type WorkspaceResource = "lead_export" | "gallery" | ContentKind;
 
 const resources: Array<{
   id: WorkspaceResource;
   label: string;
   description: string;
 }> = [
+  {
+    id: "lead_export",
+    label: "ส่งออก Lead",
+    description: "ดาวน์โหลดข้อมูลสำหรับ Excel master",
+  },
   {
     id: "gallery",
     label: "ผลงาน",
@@ -51,7 +57,7 @@ export function AdminWorkspace() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [resource, setResource] = useState<WorkspaceResource>("gallery");
+  const [resource, setResource] = useState<WorkspaceResource>("lead_export");
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -156,7 +162,7 @@ export function AdminWorkspace() {
       <header className="admin-global-header">
         <div>
           <p className="eyebrow">DD BOX CONTENT OPERATIONS</p>
-          <h1>จัดการเนื้อหาเว็บไซต์</h1>
+          <h1>จัดการเว็บไซต์และข้อมูล Lead</h1>
           <p className="muted">{user.email ?? "ผู้ดูแลระบบ"}</p>
         </div>
         <button
@@ -168,7 +174,7 @@ export function AdminWorkspace() {
         </button>
       </header>
 
-      <nav className="admin-resource-nav" aria-label="ประเภทเนื้อหา">
+      <nav className="admin-resource-nav" aria-label="งานผู้ดูแลระบบ">
         {resources.map((item) => (
           <button
             key={item.id}
@@ -182,7 +188,12 @@ export function AdminWorkspace() {
         ))}
       </nav>
 
-      {resource === "gallery" ? (
+      {resource === "lead_export" ? (
+        <LeadExportPanel
+          user={user}
+          onReauthenticate={() => signOut(getFirebaseAuth())}
+        />
+      ) : resource === "gallery" ? (
         <AdminGalleryEditor
           user={user}
           onReauthenticate={() => signOut(getFirebaseAuth())}

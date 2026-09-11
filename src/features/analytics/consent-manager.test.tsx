@@ -2,6 +2,16 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConsentManager, ConsentSettingsButton } from "./consent-manager";
 import { PRIVACY_CONSENT_STORAGE_KEY, writePrivacyConsent } from "./consent";
+import {
+  ATTRIBUTION_STORAGE_KEY,
+  captureAttributionIfAllowed,
+  readAttribution,
+} from "./attribution";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => window.location.pathname,
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
 
 const gtmId = "GTM-MWW3HWHR";
 
@@ -31,6 +41,7 @@ describe("ConsentManager", () => {
     delete window.gtag;
     delete window.__ddboxConsentDefaultSet;
     document.getElementById("ddbox-google-tag-manager")?.remove();
+    window.history.replaceState({}, "", "/");
   });
 
   it("keeps GTM blocked and persists necessary-only across refresh", async () => {
@@ -180,6 +191,13 @@ describe("ConsentManager", () => {
   it("revokes measurement, persists necessary-only and reloads the page", async () => {
     const reloadPage = vi.fn();
     writePrivacyConsent("all", "2026-09-09T08:05:00.000Z");
+    window.history.replaceState(
+      {},
+      "",
+      "/quote?utm_source=google&utm_medium=cpc&utm_campaign=before_revoke",
+    );
+    captureAttributionIfAllowed(window.location.href);
+    expect(window.localStorage.getItem(ATTRIBUTION_STORAGE_KEY)).not.toBeNull();
     window.dataLayer = [];
     render(
       <>
@@ -207,7 +225,43 @@ describe("ConsentManager", () => {
       ad_user_data: "denied",
       ad_personalization: "denied",
     });
+    expect(window.localStorage.getItem(ATTRIBUTION_STORAGE_KEY)).toBeNull();
     expect(reloadPage).toHaveBeenCalledOnce();
+  });
+
+  it("captures only after consent and updates last touch on client navigation", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/quote?utm_source=google&utm_medium=cpc&utm_campaign=campaign_a",
+    );
+    const rendered = render(<ConsentManager gtmId={gtmId} />);
+
+    expect(readAttribution()).toBeNull();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "ยอมรับการวัดผลและโฆษณา",
+      }),
+    );
+    await waitFor(() =>
+      expect(readAttribution()?.first_touch?.utm_campaign).toBe("campaign_a"),
+    );
+
+    window.history.pushState(
+      {},
+      "",
+      "/products/folding-carton?utm_source=google&utm_medium=cpc&utm_campaign=campaign_b",
+    );
+    rendered.rerender(<ConsentManager gtmId={gtmId} />);
+
+    await waitFor(() => {
+      const attribution = readAttribution();
+      expect(attribution?.first_touch?.utm_campaign).toBe("campaign_a");
+      expect(attribution?.last_touch?.utm_campaign).toBe("campaign_b");
+      expect(attribution?.last_touch?.landing_path).toBe(
+        "/products/folding-carton",
+      );
+    });
   });
 
   it("classifies only allowlisted LINE hosts and includes contact context", async () => {

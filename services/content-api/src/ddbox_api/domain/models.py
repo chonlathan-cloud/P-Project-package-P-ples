@@ -1,11 +1,23 @@
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    ModelWrapValidatorHandler,
+    PrivateAttr,
+    field_validator,
+    model_validator,
+)
+from pydantic import (
+    ValidationError as PydanticValidationError,
+)
 
 
 def utc_now() -> datetime:
@@ -389,8 +401,228 @@ class NotificationStatus(StrEnum):
     FAILED = "failed"
 
 
+class MeasurementConsentMode(StrEnum):
+    UNSET = "unset"
+    NECESSARY = "necessary"
+    ALL = "all"
+
+
+class AttributionStatus(StrEnum):
+    CAPTURED = "captured"
+    CONSENT_DENIED = "consent_denied"
+    NO_VALID_TOUCH = "no_valid_touch"
+    EXPIRED = "expired"
+    INVALID = "invalid"
+    UNAVAILABLE = "unavailable"
+    LEGACY_UNKNOWN = "legacy_unknown"
+
+
+class AttributionDropReason(StrEnum):
+    INVALID_ATTRIBUTION = "invalid_attribution"
+    INVALID_MEASUREMENT_CONSENT = "invalid_measurement_consent"
+    CONSENT_NOT_GRANTED = "consent_not_granted"
+    CONSENT_UNAVAILABLE = "consent_unavailable"
+    CLIENT_TIME_INVALID = "client_time_invalid"
+
+
+_ATTRIBUTION_TTL = timedelta(days=90)
+_CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+_CONTROLLED_TOKEN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._~-]*$")
+_NUMERIC_ID = re.compile(r"^\d+$")
+_UNRESOLVED_VALUE_TRACK = re.compile(r"\{[^{}]+\}")
+_EMAIL_LIKE_VALUE = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
+_FORMULA_PHONE_VALUE = re.compile(r"^[+()\d.\-\s]+$")
+LEAD_BUSINESS_FIELDS = (
+    "company",
+    "consent",
+    "contact_name",
+    "customer_path",
+    "delivery_province",
+    "dimensions",
+    "email",
+    "line_id",
+    "phone",
+    "preferred_contact",
+    "product_type",
+    "project_details",
+    "quantity",
+    "required_date",
+)
+
+
+def _has_likely_personal_data(value: str) -> bool:
+    if _EMAIL_LIKE_VALUE.search(value):
+        return True
+    digit_count = sum(character.isdigit() for character in value)
+    return 8 <= digit_count <= 15 and _FORMULA_PHONE_VALUE.fullmatch(value) is not None
+
+
+def _valid_attribution_text(
+    value: str,
+    maximum_length: int,
+    *,
+    controlled_token: bool = False,
+    reject_likely_pii: bool = False,
+) -> bool:
+    if (
+        not value
+        or value != value.strip()
+        or len(value) > maximum_length
+        or _CONTROL_CHARACTERS.search(value)
+        or _UNRESOLVED_VALUE_TRACK.search(value)
+    ):
+        return False
+    if controlled_token and _CONTROLLED_TOKEN.fullmatch(value) is None:
+        return False
+    return not (reject_likely_pii and _has_likely_personal_data(value))
+
+
+class AttributionTouch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_id: str | None = None
+    utm_content: str | None = None
+    utm_term: str | None = None
+    adgroup_id: str | None = None
+    gclid: str | None = None
+    landing_path: str
+    captured_at: datetime
+    expires_at: datetime
+
+    @field_validator("utm_source", "utm_medium")
+    @classmethod
+    def validate_controlled_token(cls, value: str | None) -> str | None:
+        if value is not None and not _valid_attribution_text(
+            value,
+            100,
+            controlled_token=True,
+            reject_likely_pii=True,
+        ):
+            raise ValueError("must be a valid attribution token")
+        return value
+
+    @field_validator("utm_campaign")
+    @classmethod
+    def validate_campaign(cls, value: str | None) -> str | None:
+        if value is not None and not _valid_attribution_text(value, 200, reject_likely_pii=True):
+            raise ValueError("must be a valid campaign value")
+        return value
+
+    @field_validator("utm_content")
+    @classmethod
+    def validate_campaign_content(cls, value: str | None) -> str | None:
+        if value is not None and not (
+            _valid_attribution_text(value, 200)
+            and (_NUMERIC_ID.fullmatch(value) or not _has_likely_personal_data(value))
+        ):
+            raise ValueError("must be a valid campaign content value")
+        return value
+
+    @field_validator("utm_term")
+    @classmethod
+    def validate_term(cls, value: str | None) -> str | None:
+        if value is not None and not _valid_attribution_text(value, 300, reject_likely_pii=True):
+            raise ValueError("must be a valid attribution term")
+        return value
+
+    @field_validator("utm_id", "adgroup_id")
+    @classmethod
+    def validate_numeric_id(cls, value: str | None) -> str | None:
+        if value is not None and not (
+            _valid_attribution_text(value, 100) and _NUMERIC_ID.fullmatch(value)
+        ):
+            raise ValueError("must be a numeric identifier string")
+        return value
+
+    @field_validator("gclid")
+    @classmethod
+    def validate_gclid(cls, value: str | None) -> str | None:
+        if value is not None and not (
+            len(value.encode("utf-8")) <= 512
+            and _valid_attribution_text(value, len(value))
+            and not any(character.isspace() for character in value)
+        ):
+            raise ValueError("must be a valid opaque click identifier")
+        return value
+
+    @field_validator("landing_path")
+    @classmethod
+    def validate_landing_path(cls, value: str) -> str:
+        if (
+            not value.startswith("/")
+            or len(value) > 2048
+            or "?" in value
+            or "#" in value
+            or _CONTROL_CHARACTERS.search(value)
+        ):
+            raise ValueError("must be an internal path without a query or fragment")
+        return value
+
+    @field_validator("captured_at", "expires_at")
+    @classmethod
+    def validate_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("must include a timezone")
+        return value
+
+    @model_validator(mode="after")
+    def validate_touch(self) -> Self:
+        if not ((self.utm_source is not None and self.utm_medium is not None) or self.gclid):
+            raise ValueError("requires source and medium or a GCLID")
+        lifetime = self.expires_at - self.captured_at
+        if lifetime <= timedelta(0) or lifetime > _ATTRIBUTION_TTL:
+            raise ValueError("attribution lifetime must be between zero and 90 days")
+        return self
+
+
+class LeadAttribution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal[1]
+    model: Literal["first_last_tagged"]
+    first_touch: AttributionTouch | None
+    last_touch: AttributionTouch | None
+
+    @model_validator(mode="after")
+    def validate_touches(self) -> Self:
+        if self.first_touch is None or self.last_touch is None:
+            raise ValueError("first and last touch must both be present")
+        if self.first_touch.captured_at > self.last_touch.captured_at:
+            raise ValueError("first touch cannot be newer than last touch")
+        return self
+
+
+class MeasurementConsentSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: MeasurementConsentMode
+    version: int | None = Field(default=None, ge=1)
+    updated_at: datetime | None = None
+
+    @field_validator("updated_at")
+    @classmethod
+    def validate_updated_at_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("must include a timezone")
+        return value
+
+    @model_validator(mode="after")
+    def validate_snapshot(self) -> Self:
+        if self.mode == MeasurementConsentMode.UNSET:
+            if self.version is not None or self.updated_at is not None:
+                raise ValueError("unset consent cannot include version or update time")
+        elif self.version is None or self.updated_at is None:
+            raise ValueError("saved consent requires version and update time")
+        return self
+
+
 class LeadCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    _attribution_drop_reason: AttributionDropReason | None = PrivateAttr(default=None)
 
     customer_path: CustomerPath
     product_type: str = Field(min_length=2, max_length=120)
@@ -407,8 +639,64 @@ class LeadCreate(BaseModel):
     preferred_contact: ContactPreference
     consent: Literal[True]
     landing_page: str | None = Field(default=None, max_length=2048)
+    submission_path: str | None = Field(default=None, max_length=2048)
     campaign_source: str | None = Field(default=None, max_length=200)
+    measurement_consent: MeasurementConsentSnapshot | None = None
+    attribution: LeadAttribution | None = None
     website: str = Field(default="", max_length=0, exclude=True)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def tolerate_invalid_optional_metadata(
+        cls,
+        data: Any,
+        handler: ModelWrapValidatorHandler[Self],
+    ) -> Self:
+        drop_reason: AttributionDropReason | None = None
+        try:
+            model = handler(data)
+        except PydanticValidationError as error:
+            if not isinstance(data, dict):
+                raise
+            metadata_fields = {"attribution", "measurement_consent"}
+            error_fields = {item["loc"][0] for item in error.errors() if len(item["loc"]) > 0}
+            if not error_fields or not error_fields.issubset(metadata_fields):
+                raise
+            sanitized = dict(data)
+            if "measurement_consent" in error_fields:
+                sanitized["measurement_consent"] = None
+                sanitized["attribution"] = None
+                drop_reason = AttributionDropReason.INVALID_MEASUREMENT_CONSENT
+            else:
+                sanitized["attribution"] = None
+                drop_reason = AttributionDropReason.INVALID_ATTRIBUTION
+            model = handler(sanitized)
+
+        if model.attribution is not None and (
+            model.measurement_consent is None
+            or model.measurement_consent.mode != MeasurementConsentMode.ALL
+        ):
+            model.attribution = None
+            drop_reason = (
+                AttributionDropReason.CONSENT_UNAVAILABLE
+                if model.measurement_consent is None
+                or model.measurement_consent.mode == MeasurementConsentMode.UNSET
+                else AttributionDropReason.CONSENT_NOT_GRANTED
+            )
+        model._attribution_drop_reason = drop_reason
+        return model
+
+    @field_validator("submission_path")
+    @classmethod
+    def validate_submission_path(cls, value: str | None) -> str | None:
+        if value is not None and (
+            not value.startswith("/")
+            or "?" in value
+            or "#" in value
+            or _CONTROL_CHARACTERS.search(value)
+        ):
+            raise ValueError("must be an internal path without a query or fragment")
+        return value
 
     @model_validator(mode="after")
     def validate_conditional_fields(self) -> LeadCreate:
@@ -423,6 +711,14 @@ class LeadCreate(BaseModel):
             raise ValueError("quantity is required when specifications are available")
         return self
 
+    @property
+    def attribution_drop_reason(self) -> AttributionDropReason | None:
+        return self._attribution_drop_reason
+
+
+def lead_business_data(payload: LeadCreate) -> dict[str, Any]:
+    return payload.model_dump(mode="json", include=set(LEAD_BUSINESS_FIELDS))
+
 
 class LeadReceipt(BaseModel):
     reference: str
@@ -435,8 +731,12 @@ class StoredLead(BaseModel):
     reference: str
     payload: LeadCreate
     payload_fingerprint: str
+    payload_fingerprint_version: Literal[1, 2] = 1
     idempotency_hash: str
     created_at: datetime
+    lead_origin: Literal["website_form"] = "website_form"
+    attribution_status: AttributionStatus = AttributionStatus.LEGACY_UNKNOWN
+    attribution_drop_reason: AttributionDropReason | None = None
     notification_status: NotificationStatus = NotificationStatus.PENDING
     notification_attempts: int = Field(default=0, ge=0)
     notification_lease_until: datetime | None = None

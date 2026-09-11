@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal, cast
 
 from google.api_core.exceptions import AlreadyExists
@@ -17,6 +17,7 @@ from ddbox_api.domain.models import (
     PricingBenchmark,
     StoredLead,
     StructuredContent,
+    lead_business_data,
     utc_now,
 )
 
@@ -298,6 +299,7 @@ class FirestoreContentRepository:
         lead: StoredLead,
         idempotency_hash: str,
         payload_fingerprint: str,
+        compatible_payload_fingerprints: frozenset[str] = frozenset(),
     ) -> tuple[StoredLead, bool]:
         key_ref = self._client.collection("lead_idempotency").document(idempotency_hash)
         lead_ref = self._client.collection("leads").document(lead.id)
@@ -307,20 +309,33 @@ class FirestoreContentRepository:
         def create(transaction: firestore.Transaction) -> tuple[StoredLead, bool]:
             existing_key = key_ref.get(transaction=transaction)
             if existing_key.exists:
-                if existing_key.get("payload_fingerprint") != payload_fingerprint:
-                    raise ConflictError("idempotency key was already used for another payload")
-                existing_lead = (
+                accepted_fingerprints = compatible_payload_fingerprints | {payload_fingerprint}
+                existing_snapshot = (
                     self._client.collection("leads")
                     .document(str(existing_key.get("lead_id")))
                     .get(transaction=transaction)
                 )
-                return StoredLead.model_validate(existing_lead.to_dict()), True
+                if not existing_snapshot.exists:
+                    raise RuntimeError("idempotency record refers to a missing lead")
+                existing_lead = StoredLead.model_validate(existing_snapshot.to_dict())
+                compatible_legacy_payload = (
+                    existing_lead.payload_fingerprint_version == 1
+                    and lead_business_data(existing_lead.payload)
+                    == lead_business_data(lead.payload)
+                )
+                if (
+                    existing_key.get("payload_fingerprint") not in accepted_fingerprints
+                    and not compatible_legacy_payload
+                ):
+                    raise ConflictError("idempotency key was already used for another payload")
+                return existing_lead, True
             transaction.create(lead_ref, lead.model_dump(mode="json"))
             transaction.create(
                 key_ref,
                 {
                     "lead_id": lead.id,
                     "payload_fingerprint": payload_fingerprint,
+                    "payload_fingerprint_version": lead.payload_fingerprint_version,
                     "created_at": lead.created_at,
                 },
             )
@@ -331,6 +346,33 @@ class FirestoreContentRepository:
     def get_lead(self, lead_id: str) -> StoredLead | None:
         snapshot = self._client.collection("leads").document(lead_id).get()
         return StoredLead.model_validate(snapshot.to_dict()) if snapshot.exists else None
+
+    def list_leads(
+        self,
+        created_from: datetime,
+        created_to: datetime,
+        *,
+        after_id: str | None = None,
+        limit: int = 500,
+    ) -> list[StoredLead]:
+        # Lead documents use Pydantic's JSON representation, so created_at is
+        # stored as an RFC 3339 string rather than a Firestore timestamp.
+        range_start = created_from.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        range_end = created_to.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        query = (
+            self._client.collection("leads")
+            .where(filter=firestore.FieldFilter("created_at", ">=", range_start))
+            .where(filter=firestore.FieldFilter("created_at", "<", range_end))
+            .order_by("created_at", direction=firestore.Query.ASCENDING)
+            .order_by("__name__", direction=firestore.Query.ASCENDING)
+            .limit(limit)
+        )
+        if after_id is not None:
+            cursor = self._client.collection("leads").document(after_id).get()
+            if not cursor.exists:
+                return []
+            query = query.start_after(cursor)
+        return [StoredLead.model_validate(snapshot.to_dict()) for snapshot in query.stream()]
 
     def claim_notification(
         self, lead_id: str, lease_until: datetime

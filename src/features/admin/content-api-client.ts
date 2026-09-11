@@ -46,12 +46,12 @@ function friendlyError(problem: ApiProblem | null, status: number) {
   return `${problem?.detail ?? "เชื่อมต่อ Content API ไม่สำเร็จ"}${reference}`;
 }
 
-async function request<T>(
+async function request(
   user: User,
   path: string,
   init: RequestInit,
   forceRefresh: boolean,
-): Promise<T> {
+): Promise<Response> {
   let token: string;
   try {
     token = await user.getIdToken(forceRefresh);
@@ -61,16 +61,16 @@ async function request<T>(
       401,
     );
   }
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  if (init.body && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...init.headers,
-    },
+    headers,
   });
-  if (response.ok) return response.json() as Promise<T>;
+  if (response.ok) return response;
   if (!forceRefresh && (response.status === 401 || response.status === 403)) {
     return request(user, path, init, true);
   }
@@ -89,5 +89,48 @@ export async function adminApi<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  return request(user, path, init, false);
+  const response = await request(user, path, init, false);
+  return response.json() as Promise<T>;
+}
+
+export type AdminDownload = Readonly<{
+  blob: Blob;
+  filename: string;
+  exportId: string | null;
+  recordCount: number | null;
+}>;
+
+function downloadFilename(contentDisposition: string | null): string {
+  const filename = contentDisposition?.match(/filename="([^"\\/]+)"/i)?.[1];
+  return (
+    filename || `DD_BOX_Leads_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+}
+
+export async function adminDownload(
+  user: User,
+  path: string,
+): Promise<AdminDownload> {
+  const response = await request(
+    user,
+    path,
+    {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    },
+    false,
+  );
+  const rawCount = response.headers.get("X-DDBox-Record-Count");
+  const parsedCount =
+    rawCount === null ? Number.NaN : Number.parseInt(rawCount, 10);
+  return {
+    blob: await response.blob(),
+    filename: downloadFilename(response.headers.get("Content-Disposition")),
+    exportId: response.headers.get("X-DDBox-Export-ID"),
+    recordCount:
+      Number.isInteger(parsedCount) && parsedCount >= 0 ? parsedCount : null,
+  };
 }

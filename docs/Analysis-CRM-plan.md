@@ -4,10 +4,20 @@
 > **Version:** 1.0 — แผนพัฒนาและคู่มือปฏิบัติงานสำหรับรอบแรก  
 > **วันที่จัดทำ/ตรวจแหล่งข้อมูลออนไลน์:** 10 กันยายน 2026 (พ.ศ. 2569)  
 > **ขอบเขต:** Website attribution → Excel sales tracking → Google Search Core → readiness ก่อนใช้งบ  
-> **สถานะ:** เอกสารเสนอวิธีดำเนินการ ไม่ใช่หลักฐานว่าพัฒนา ทดสอบ หรือเปิด Campaign แล้ว  
+> **สถานะ:** Controlled launch เริ่มแล้วเมื่อ 11 กันยายน 2026; Campaign เปิดใช้งานและอยู่ระหว่าง Google ตรวจโฆษณา/สินทรัพย์
 > **ผู้รับผิดชอบการขาย:** คุณเปิ้ล — ผู้ใช้ยืนยัน  
-> **ผู้ประสานงานเทคนิค/Marketing ที่เสนอ:** เปา — ให้ยืนยันผู้สำรองและผู้อนุมัติเปิดแคมเปญ  
+> **ผู้ประสานงานเทคนิค/Marketing ที่เสนอ:** เปา — Owner/ผู้ใช้เป็นผู้อนุมัติ Launch และงบ
 > **Repository baseline ที่อ่านได้:** `main` ที่ commit `567b5977bfeb09b5d4bbbcd9b436c21ad84dd0fa`
+
+---
+
+## Execution update — 11 กันยายน 2026
+
+- ส่วน 1–2: PR-A ถึง PR-D พัฒนาและทดสอบแล้ว; Attribution, backend export, Admin export และ Excel master พร้อมหลักฐานทดสอบ แต่ Production deploy และการทดลอง workflow จริงโดยคุณเปิ้ลยังเป็น gate แยก
+- ส่วน 3–4: Google Search Core build และ post-Publish inventory เสร็จแล้วประมาณ 98%: Campaign ID `24234245697`, 3 ad groups, 26 Exact/Phrase keywords, 6 RSA, 10 campaign negative phrases, 4 sitelinks, 4 callouts, 1 structured snippet และ 1 call asset
+- ส่วน 5: Owner อนุมัติ Launch วันนี้, cost basis เป็น Media only และยืนยันว่าไม่ใช่ EU political ads; Campaign เปิดใช้งานแล้วเมื่อ 2026-09-11 และสถานะล่าสุดเปลี่ยนเป็น `Enabled / Eligible (Learning)` ขณะระบบเรียนรู้ bid strategy
+- สถานะตรวจล่าสุด: โฆษณาและ assets ยัง `Pending / Under review`; impressions/clicks/conversions = 0 และ campaign Cost = 0 บาท จึงยังต้องติดตาม policy, delivery, paid-click attribution และ Lead จริงรายแรกต่อใน controlled launch
+- ความคืบหน้า minimum launch implementation: **ประมาณ 98%**; งานที่เหลือคือ Google policy completion, real paid-click/Lead validation โดยไม่คลิกโฆษณาตัวเอง, workflow จริงของคุณเปิ้ล และ monitoring Day 1–45
 
 ---
 
@@ -47,23 +57,31 @@
 | Measurement privacy | คง Strict Basic: ไม่โหลด GTM/GA4 ก่อนยินยอม | แนวทางที่ตกลงและผล QA ที่ผู้ใช้รายงาน [U2] |
 | Primary Conversion | GA4 `generate_lead` → Google Ads Primary / Count One | ผู้ใช้รายงานว่าตั้งแล้ว [U2] |
 | Business contact | `084-678-9714` / `Nuntha@ddboxprinting.com` | ผู้ใช้ยืนยันให้ใช้ข้อมูลชุดนี้ [U2] |
+| Campaign dates / timezone | **2026-09-11 ถึง 2026-10-25 / GMT+07:00** | ผู้ใช้ยืนยันและ Publish แล้ว 2026-09-11 |
+| Ad schedule | **Monday–Saturday 08:00–20:00** | ผู้ใช้ยืนยันและตั้งใน Campaign แล้ว 2026-09-11 |
+| Lead handling | **Primary คุณเปิ้ล / Backup คุณวิว** | ผู้ใช้ยืนยัน 2026-09-11; ข้อมูลติดต่อสำรองไม่บันทึกซ้ำใน repository |
+| Call asset | **อนุมัติสำหรับ Google Ads; Monday–Saturday 07:30–19:30** | สร้างและ associate ระดับ Campaign แล้ว; call reporting ON / recording OFF |
+| Creative / assets | **RSA, Sitelink, Callout, Structured snippet approved** | สร้าง RSA 6 ชิ้นและ campaign assets ครบแล้ว; อยู่ระหว่าง Google review |
+| Negative keywords | **10 APPLY approved; `template` REVIEW; `แบบกล่อง`/`ฟรี`/`ราคาถูก` HOLD** | ใช้ 10 รายการระดับ Campaign แบบ Phrase Match แล้ว 2026-09-11; รายการ REVIEW/HOLD ไม่ถูกเพิ่ม |
+| Budget approver / guard | **Owner/ผู้ใช้; แจ้งเตือน 10,000 บาท, pause 10,750 บาท, เปิดต่อได้เมื่อ Owner อนุมัติ** | ผู้ใช้ยืนยันตนเองเป็นผู้อนุมัติงบ 2026-09-11; guard ใช้ campaign Cost ใน Google Ads และเผื่อ daily-spend exposure 500 บาทก่อนกรอบ 11,250 บาท |
+| Cost basis / EU declaration / Launch | **Media only / No / Approved today** | Owner ยืนยันและดำเนินการใน Google Ads แล้ว 2026-09-11 |
 
 **ผลกระทบจากการเลือก Excel:** ไม่สร้างหน้า CRM ที่ให้คุณเปิ้ลต้องอัปเดตสถานะซ้ำในเว็บ และไม่เปลี่ยนไป Google Sheets, HubSpot หรือระบบอื่นโดยอัตโนมัติ ข้อเสนอเดิมเรื่องสร้าง CRM Admin เต็มรูปแบบถูกเปลี่ยนเป็น **การส่งออก Lead อย่างปลอดภัย + Excel master ที่ใช้งานจริง** ตามคำตอบล่าสุด
 
-**สิ่งที่การยืนยันนี้ยังไม่ครอบคลุม:** วันเปิดแคมเปญจริง, สิทธิ์เพิ่มงบ, งบสำรอง, งบ Meta/Low MOQ, การเผยแพร่ Ad copy, เวลาทำการ/SLA และนโยบายเก็บข้อมูล ไม่มีการอนุมัติเหล่านี้โดยปริยาย
+**สิ่งที่การยืนยันนี้ยังไม่ครอบคลุม:** สิทธิ์เพิ่มงบหรือ re-enable หลัง budget guard ทำงาน, งบสำรอง, งบ Meta/Low MOQ, SLA การตอบ Lead และนโยบายเก็บข้อมูล ไม่มีการอนุมัติเหล่านี้โดยปริยาย
 
 ### รายละเอียดที่ยังไม่ทราบ — ไม่ขวางการจัดทำแผน
 
 | รายละเอียด | แนวทางชั่วคราวในเอกสาร | ต้องยืนยันเมื่อใด |
 |---|---|---|
-| Excel เดิมมีคอลัมน์อะไร | ออกแบบ logical fields ก่อน เมื่อได้ไฟล์เปล่าหรือหัวตารางจึง mapping | ก่อนทำ template/merge ให้ใช้งานจริง |
+| Excel source workbook | ได้รับและตรวจ `DD_BOX_Lead_Master.xlsx` แล้ว; v1 mapping/template พร้อม | resolved สำหรับ implementation; operating location/backup ยังรอ |
 | Excel อยู่ในคอม, network drive หรือ OneDrive | ใช้ manual export/import แบบไม่พึ่ง cloud integration | ก่อนแจกไฟล์และกำหนด backup |
 | Excel version / Windows / Mac | ไม่บังคับ VBA, Power Query, Microsoft 365 หรือ XLOOKUP | ก่อนใช้ feature เฉพาะ version |
-| วัน–เวลาทำการและคนสำรอง | เก็บเวลารับ Lead/เวลาติดต่อจริงก่อน ไม่คำนวณ SLA ชั่วโมงทำการจากการเดา | ก่อน Launch |
+| SLA การตอบ Lead | มี campaign/call schedules และคนสำรองแล้ว แต่ยังไม่กำหนด response-time target | ก่อน Launch |
 | เอกสาร PO/ใบเสนอราคาเก็บที่ไหน | บันทึกเลขเอกสารและลิงก์ภายในที่ผู้มีสิทธิ์เปิดได้ | ก่อนคุณเปิ้ลเริ่มใช้งาน |
 | มูลค่าใน Excel รวม VAT หรือไม่ | มีช่อง `amount_basis` ให้ระบุ ห้ามรวมยอดต่างฐาน | ก่อนรายงานมูลค่า |
 | ระยะเก็บ attribution | เสนอ browser 90 วันต่อ touch; retention ฝั่ง Lead/ไฟล์ส่งออกต้องอนุมัติแยก | ก่อนเปิด capture บน Production |
-| ผู้อนุมัติ Launch/เพิ่มงบ | บันทึกชื่อและเวลายืนยันจริง | ก่อนเปิดแอด/ปรับงบ |
+| ผู้อนุมัติ Launch/เพิ่มงบ | Owner/ผู้ใช้อนุมัติ Launch วันนี้แล้ว; การเพิ่มงบหรือ re-enable หลัง guard ยังต้องอนุมัติใหม่ | ก่อนปรับงบ/เปิดต่อ |
 
 ---
 
@@ -88,10 +106,10 @@
 | GA4 ↔ Google Ads | ผู้ใช้รายงานเชื่อมแล้ว, personalized advertising OFF, auto-tagging ON |
 | Google Ads conversion | `generate_lead` Primary/One; `click_line`, `click_call` Secondary/All ตามสรุปล่าสุด |
 | Billing | ผู้ใช้รายงานแก้แล้ว ไม่แก้การชำระเงินในงานนี้ |
-| Campaign | ยังไม่ได้สร้าง/เปิดตามสรุปล่าสุด |
+| Campaign | สร้างและเปิดแล้ว 2026-09-11; ID `24234245697`, `Enabled / Eligible (Learning)`, Cost 0 บาท ณ เวลาตรวจ |
 | Attribution เข้า Lead record | ยังไม่พบ structured UTM/GCLID ใน source baseline ที่อ่าน |
 | Sales state ใน backend | `StoredLead` มี notification status แต่ยังไม่มี sales lifecycle fields ใน model ที่อ่าน |
-| Excel จริง | ยังไม่ได้รับหรือเปิดอ่านไฟล์ของคุณเปิ้ล |
+| Excel จริง | ได้รับและตรวจ `docs/Analysis-CRM-plan/DD_BOX_Lead_Master.xlsx`; PR-D technical smoke test ผ่านและ 46 export columns ตรง API schema |
 
 Source code ที่ตรวจพบใช้ Next.js/TypeScript ฝั่งเว็บ, FastAPI/Pydantic ฝั่ง API และมี repository สำหรับ Firestore; `toLeadPayload()` ยังส่ง `landing_page` จาก `window.location.href` ส่วน `LeadCreate` มี `campaign_source` แต่ไม่ได้มีโครง attribution แบบ first/last touch [R1–R4]
 
@@ -436,7 +454,7 @@ Rollback: ปิด attribution capture/attachment แต่คงฟอร์�
 
 ## 2.1 รูปแบบ Excel ที่เสนอ
 
-**ชื่อไฟล์ทำงานที่เสนอ:** `DD_BOX_Lead_Master.xlsx` — ยังไม่ได้สร้างไฟล์ `.xlsx` ในงานจัดทำเอกสารนี้ และยังไม่ได้แก้ Excel เดิมของบริษัท
+**ชื่อไฟล์ทำงาน:** `DD_BOX_Lead_Master.xlsx` — ได้รับไฟล์และปรับเป็น master template แล้ว; รายละเอียด QA อยู่ใน `docs/analysis-crm-prd-test-evidence.md`
 
 ใช้ workbook master เพียงชุดเดียวที่มีผู้รับผิดชอบชัดเจน ไม่ส่งสำเนาหลายชื่อให้หลายคนแก้พร้อมกัน
 
@@ -663,15 +681,15 @@ Priority A/B/C และ repeat potential เป็นการจัดลำ�
 
 ## 2.9 Definition of Done ของส่วน 1–2
 
-- [ ] Backend รับ Lead ได้ทั้ง consent all และ necessary
-- [ ] Positive path ได้ UTM/GCLID snapshot ที่ join กลับถึง Excel ด้วย lead_id
-- [ ] Negative path ไม่เก็บ acquisition ผ่านช่องทางลัด
-- [ ] Export/import ซ้ำไม่เพิ่ม Lead และไม่เขียนทับสถานะคุณเปิ้ล
+- [x] Backend รับ Lead ได้ทั้ง consent all และ necessary
+- [x] Positive path ได้ UTM/GCLID snapshot ที่ join กลับถึง Excel ด้วย lead_id
+- [x] Negative path ไม่เก็บ acquisition ผ่านช่องทางลัด
+- [x] Export/import ซ้ำไม่เพิ่ม Lead และไม่เขียนทับสถานะคุณเปิ้ล
 - [ ] คุณเปิ้ลทดลองอัปเดตสถานะถึง Won พร้อม PO สมมติใน test workbook ได้จริง
-- [ ] มี evidence ของ T01–T24 ตามขอบเขตที่ใช้ และระบุสิ่งที่ยังไม่ได้ทดสอบ
-- [ ] Source fields / sales fields / money fields ถูกแยก
-- [ ] ผ่าน tests, build และ Web Test ก่อน Production; มี commit SHA/revision/rollback ที่ระบุได้
-- [ ] ตำแหน่ง Excel master, backup, สิทธิ์, เวลาทำการและผู้สำรองถูกตกลงก่อน Launch
+- [x] มี evidence ของ T01–T24 ตามขอบเขตที่ใช้ และระบุสิ่งที่ยังไม่ได้ทดสอบ
+- [x] Source fields / sales fields / money fields ถูกแยก
+- [x] ผ่าน tests, build และ Web Test; Test revisions/rollback ระบุใน evidence แล้ว
+- [ ] ตำแหน่งใช้งาน Excel master, backup และสิทธิ์ยังต้องตกลง; campaign/call hours และผู้สำรองยืนยันแล้ว
 
 ---
 
@@ -687,7 +705,9 @@ Priority A/B/C และ repeat potential เป็นการจัดลำ�
 
 Google ระบุว่าสำหรับแคมเปญส่วนใหญ่ ค่าใช้จ่ายรายวันอาจสูงถึง 2 เท่าของ average daily budget และมี monthly spending limit ตามเงื่อนไขระบบ จึงต้องตรวจสะสมแยกจาก `250 × 45`; **250 บาท/วันไม่ใช่ hard daily cap และ 11,250 ไม่ได้ถูก lock อัตโนมัติ** [G5]
 
-ให้บันทึกก่อน Launch ว่า 11,250 เป็น media working envelope, วิธีติดตาม/หยุดเมื่อใกล้ใช้ครบ และค่าใช้จ่ายอื่น เช่น tax/consult fee อยู่ในหรืออยู่นอกงบ — ส่วนนี้ยังรอยืนยัน ไม่คำนวณภาษีเอง
+Owner ยืนยันว่า 11,250 บาทเป็น media-only working envelope แล้ว ให้ติดตาม Campaign Cost ระดับ Google Ads, แจ้งที่ 10,000 บาท และ pause ที่ 10,750 บาท; VAT/ค่าบริการอยู่นอกกรอบนี้และไม่คำนวณเพิ่มเอง
+
+**สถานะ guard ปัจจุบัน:** เป็น operational control แบบ manual ที่ต้องตรวจอย่างน้อยวันละครั้ง ไม่ใช่ automated rule หรือ hard lifetime cap ใน Google Ads; ยังไม่ได้เปลี่ยน account mode เพื่อตั้ง automation เพราะอยู่นอกขอบเขตการอนุมัติ Launch ครั้งนี้
 
 ## 3.2 ตารางตั้งค่าที่จะนำเข้า UI
 
@@ -802,27 +822,29 @@ utm_source=google&utm_medium=cpc&utm_campaign=dd45_core_custom_box&utm_id={campa
 
 ## 3.7 Definition of Done ของ Build Sheet
 
-- [ ] Campaign settings มีค่า, ที่มา และผู้อนุมัติ; ไม่มี hidden budget change
-- [ ] Keyword/Negative มี intent และ match type ที่ตรวจแล้ว
-- [ ] Landing URL เปิดได้จริงบนมือถือ และสอดคล้องกับ ad promise
-- [ ] RSA/Assets ครบตามที่จะใช้งานและได้รับ approval ของข้อความ/claims
-- [ ] Final URL suffix ตรง schema และ test URL ไม่ทำ redirect พารามิเตอร์หาย
-- [ ] Primary goal ใช้เฉพาะ lead ที่ต้องการ ไม่มี secondary หลุดเข้า custom bidding goal
-- [ ] กำหนดวันเริ่ม/วันจบหรือช่อง TBD ชัด; TBD ที่จำเป็นต้องปิดก่อน Launch
+- [x] Campaign settings มีค่า, ที่มา และผู้อนุมัติ; ไม่มี hidden budget change
+- [x] Keyword/Negative มี intent และ match type ที่ตรวจแล้ว
+- [x] Landing URL เปิดได้จริงบนมือถือ และสอดคล้องกับ ad promise
+- [x] RSA/Assets ครบตามที่จะใช้งานและได้รับ approval ของข้อความ/claims
+- [x] Final URL suffix ตรง schema และ sample URL ไม่ทำ redirect พารามิเตอร์หาย; paid-click validation รอ traffic จริง
+- [x] Primary goal ใช้เฉพาะ lead ที่ต้องการ ไม่มี secondary หลุดเข้า custom bidding goal
+- [x] กำหนดวันเริ่ม/วันจบและ timezone แล้ว
 
 ---
 
-# 4. สร้าง Google Search Campaign เป็น Draft
+# 4. สร้าง Google Search Campaign จาก Draft สู่ Publish
 
 ## 4.1 แยกสามคำนี้ให้ชัด
 
 | คำ | ความหมาย |
 |---|---|
-| Build Sheet | สเปกบนเอกสาร ยังไม่ได้ตั้งในบัญชี |
+| Build Sheet | สเปกบนเอกสาร; รอบนี้นำไปตั้งใน Campaign จริงแล้ว |
 | Unpublished campaign draft | งานตั้งค่าร่างใน Google Ads ยังไม่เผยแพร่ |
 | Paused campaign | Campaign ที่สร้างแล้วแต่หยุดอยู่ ไม่ใช่ draft แบบเดียวกัน |
 
 Google รองรับการเก็บ campaign ที่กำลังสร้างเป็น draft และ resume ภายหลังได้ [G7] ไม่ใช้วิธี publish แล้วค่อยรีบ pause เพื่อทดลอง เพราะอาจเปิด delivery โดยไม่ตั้งใจ
+
+**Execution 2026-09-11:** สร้าง unpublished draft และหยุดที่ Review ก่อนตามแผน หลัง Owner อนุมัติ Launch จึง Publish; pause ชั่วคราวเพื่อปิด post-Publish inventory แล้วเปิดกลับเป็น Enabled ไม่ใช่การ publish เพื่อทดลองโดยไม่มีอนุมัติ
 
 ## 4.2 ลำดับทำใน UI
 
@@ -992,19 +1014,19 @@ Google มีทั้ง offline import จาก click ID และแนว�
 | D01 | Sales tool | **Confirmed: Excel** | ตามวิธีทำงานที่ผู้ใช้เลือก ไม่สร้าง CRM ซ้ำ |
 | D02 | Sales owner | **Confirmed: คุณเปิ้ล** | ผู้ใช้ยืนยันเป็นคนอัปเดต |
 | D03 | Won definition | **Confirmed: PO received** | แยก order outcome ออกจากเงินรับ/รายได้บัญชี |
-| D04 | Campaign/budget | **Confirmed: Core / 45 วัน / 250 บาทต่อวันเฉลี่ย** | ไม่เปลี่ยน campaign อื่น |
+| D04 | Campaign/budget | **Confirmed: Core / 45 วัน / 250 บาทต่อวันเฉลี่ย; Owner/ผู้ใช้เป็นผู้อนุมัติงบ; alert 10,000 / pause 10,750 บาท** | ใช้ Google Ads campaign Cost เป็นเกณฑ์; ไม่เปลี่ยน campaign อื่นและไม่เปิดต่อหลัง pause โดยไม่มี Owner approval |
 | D05 | Import workflow | Proposed: authenticated export → staging → append-new master | รองรับ Excel โดยไม่ทำ two-way sync |
 | D06 | Source truth | Proposed: backend acquisition / Excel sales / Ads spend | ลดความสับสนเรื่องข้อมูลขัดกัน |
 | D07 | Browser attribution TTL | Proposed: 90 วันต่อ touch | ต้องอนุมัติและเปิดเผยตามการใช้จริง |
 | D08 | Raw click IDs in sales workbook | Proposed: ไม่ export เป็น default | ลดการกระจายข้อมูลที่ Sales ไม่จำเป็นต้องอ่าน |
-| D09 | Qualified/SLA | Proposed criteria; hours/backup TBD | ยังไม่ได้ยืนยันวิธีทำงานรายวันทั้งหมด |
+| D09 | Qualified/SLA | Proposed criteria; campaign/call hours และ backup owner confirmed, response-time target ยังรอ | ยังไม่ได้ยืนยัน SLA วิธีทำงานรายวันทั้งหมด |
 | D10 | Offline import | Deferred | ไม่ขวาง Launch ที่มี manual outcome tracking |
 | D11 | Draft concurrency | Build Sheet/Draft ทำคู่ขนานได้ | gate อยู่ก่อน spend ไม่ใช่ก่อนร่าง |
-| D12 | Publication/deploy | ยังไม่ดำเนินการจากเอกสารนี้ | ต้องมีคำสั่งอนุมัติแยก |
+| D12 | Publication/deploy | **Confirmed and executed: Google Ads Publish/Enable 2026-09-11** | Owner ยืนยัน Media only, EU political ads = No และ Launch today; ไม่ครอบคลุมการเพิ่มงบหรือ re-enable หลัง guard |
 
 ### ข้อมูลเพิ่มเติมที่ขอภายหลังได้โดยไม่ขวางการเริ่ม PR-A
 
-ไฟล์ Excel เปล่าหรือชื่อหัวคอลัมน์เดิม, Excel version/location, วัน–เวลาทำการ/คนสำรอง, การเก็บ PO/ใบเสนอราคา, ฐานมูลค่า VAT, ผู้อนุมัติ Launch และนโยบาย retention
+Excel version/location และ backup policy, การเก็บ PO/ใบเสนอราคา, ฐานมูลค่า VAT, response-time SLA, ผู้อนุมัติ Launch และนโยบาย retention
 
 ไม่ต้องส่งข้อมูลลูกค้าจริง, เลขบัตร, password, token, service account key หรือเอกสารการเงินที่ไม่เกี่ยวกับ scope นี้
 

@@ -1,4 +1,18 @@
 import { z } from "zod";
+import {
+  getAttributionForLead,
+  type LeadAttribution,
+} from "@/features/analytics/attribution";
+import {
+  readPrivacyConsent,
+  type PrivacyConsentMode,
+} from "@/features/analytics/consent";
+
+export type MeasurementConsentSnapshot = Readonly<{
+  mode: PrivacyConsentMode | "unset";
+  version: number | null;
+  updated_at: string | null;
+}>;
 
 export const leadReceiptSchema = z.object({
   reference: z.string().regex(/^DD-[A-F0-9]{10}$/),
@@ -62,8 +76,35 @@ export type QuoteFormValues = Omit<
   consent: boolean;
 };
 
+function currentPageMetadata(): {
+  landing_page: string | null;
+  submission_path: string | null;
+} {
+  if (typeof window === "undefined")
+    return { landing_page: null, submission_path: null };
+  const url = new URL(window.location.href);
+  return {
+    landing_page: `${url.origin}${url.pathname}`,
+    submission_path: url.pathname,
+  };
+}
+
+function measurementConsentSnapshot(): MeasurementConsentSnapshot {
+  const consent = readPrivacyConsent();
+  if (!consent) return { mode: "unset", version: null, updated_at: null };
+  return {
+    mode: consent.mode,
+    version: consent.version,
+    updated_at: consent.updatedAt,
+  };
+}
+
 export function toLeadPayload(values: QuoteFormValues) {
   const parsed = quoteFormSchema.parse(values);
+  const page = currentPageMetadata();
+  const measurementConsent = measurementConsentSnapshot();
+  const attribution: LeadAttribution | null =
+    measurementConsent.mode === "all" ? getAttributionForLead() : null;
   return {
     ...parsed,
     quantity: parsed.quantity ? Number.parseInt(parsed.quantity, 10) : null,
@@ -74,6 +115,9 @@ export function toLeadPayload(values: QuoteFormValues) {
     phone: parsed.phone || null,
     line_id: parsed.line_id || null,
     email: parsed.email || null,
-    landing_page: typeof window === "undefined" ? null : window.location.href,
+    landing_page: page.landing_page,
+    submission_path: page.submission_path,
+    measurement_consent: measurementConsent,
+    attribution,
   };
 }

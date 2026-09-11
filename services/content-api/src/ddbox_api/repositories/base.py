@@ -65,9 +65,19 @@ class ContentRepository(Protocol):
         lead: StoredLead,
         idempotency_hash: str,
         payload_fingerprint: str,
+        compatible_payload_fingerprints: frozenset[str] = frozenset(),
     ) -> tuple[StoredLead, bool]: ...
 
     def get_lead(self, lead_id: str) -> StoredLead | None: ...
+
+    def list_leads(
+        self,
+        created_from: datetime,
+        created_to: datetime,
+        *,
+        after_id: str | None = None,
+        limit: int = 500,
+    ) -> list[StoredLead]: ...
 
     def claim_notification(
         self, lead_id: str, lease_until: datetime
